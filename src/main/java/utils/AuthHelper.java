@@ -12,7 +12,7 @@ public class AuthHelper {
         if (token == null) {  // Fetch token only if not already stored
             Response response = given()
                     .contentType(ContentType.JSON)
-                    .body("{\"email\": \"sarthak.bansal@renohome.ae\", \"password\": \"SB@123sarthak\",\"device_type\": \"web\"}")
+                    .body("{\"email\": \"sarthak.bansal@renohome.ae\", \"password\": \"Sarthak@123\",\"device_type\": \"app\"}")
                     .post("https://reno-dev.azurewebsites.net/api/user/login");
 
             if (response.getStatusCode() != 200) {
