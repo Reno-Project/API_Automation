@@ -1,31 +1,52 @@
 package utils;
-import io.restassured.response.Response;
+
 import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import static io.restassured.RestAssured.given;
 
 public class AuthHelper {
-    private static String token;
+    private static String contractorToken;
+    private static String homeOwnerToken;
+    private static String adminToken;
 
-    // Method to fetch and return the token
-    public static String getAuthToken() {
-        // Token For Contractor Portal
-        if (token == null) {  // Fetch token only if not already stored
-            Response response = given()
-                    .contentType(ContentType.JSON)
-                    .body("{\"email\": \"sarthak.bansal@renohome.ae\", \"password\": \"Sarthak@123\",\"device_type\": \"app\"}")
-                    .post("https://reno-dev.azurewebsites.net/api/user/login");
+    // Public method to fetch Contractor Token
+    public static String getContractorToken() {
+        if (contractorToken == null) {
+            contractorToken = fetchToken("sarthak.bansal@renohome.ae", "SB@123sarthak", "web");
+            System.out.println("Generated Contractor Token: " + contractorToken);
+        }
+        return contractorToken;
+    }
 
-            if (response.getStatusCode() != 200) {
-                throw new RuntimeException("Failed to get token: " + response.getStatusCode() + " - " + response.getBody().asString());
-            }
+    // Public method to fetch HomeOwner Token
+    public static String getHomeOwnerToken() {
+        if (homeOwnerToken == null) {
+            homeOwnerToken = fetchToken("sarthak.bansal@renohome.ae", "Sarthak@123", "app");
+            System.out.println("Generated HomeOwner Token: " + homeOwnerToken);
+        }
+        return homeOwnerToken;
+    }
 
-            // Assign the extracted token to the class-level variable
-            token = response.jsonPath().getString("token");
+    // Public method to fetch Admin Token
+    public static String getAdminToken() {
+        if (adminToken == null) {
+            adminToken = fetchToken("reno12@mailinator.com", "Demo@123", "reno");
+            System.out.println("Generated Admin Token: " + adminToken);
+        }
+        return adminToken;
+    }
 
-            // Print the token for debugging
-            System.out.println("Generated Token In AuthHelper: " + token);
+    // Private helper method to fetch token
+    private static String fetchToken(String email, String password, String deviceType) {
+        Response response = given()
+                .contentType(ContentType.JSON)
+                .body("{\"email\": \"" + email + "\", \"password\": \"" + password + "\", \"device_type\": \"" + deviceType + "\"}")
+                .post("https://reno-dev.azurewebsites.net/api/user/login");
+
+        if (response.getStatusCode() != 200) {
+            throw new RuntimeException("Failed to get token for " + email + ": " + response.getStatusCode() + " - " + response.getBody().asString());
         }
 
-        return token;
+        return response.jsonPath().getString("token");
     }
 }
