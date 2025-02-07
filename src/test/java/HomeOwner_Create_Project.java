@@ -29,43 +29,60 @@ public class HomeOwner_Create_Project {
                 .multiPart("status", "submitted")
                 .post("https://reno-dev.azurewebsites.net/api/project/create-project");
 
-        // Print the response
+        // ✅ Check project creation response
         System.out.println("Project Response: " + projectResponse.getBody().asString());
-        Assert.assertEquals(projectResponse.getStatusCode(), 200);
+        Assert.assertEquals(projectResponse.getStatusCode(), 200, "❌ Project creation failed!");
 
-        // Now fetch the project list to get the proposal ID
+        // Get Admin Token
         String adminToken = AuthHelper.getAdminToken();
+
+        // Fetch project list
         Response projectListResponse = given()
                 .header("Authorization", "Bearer " + adminToken)
                 .get("https://reno-dev.azurewebsites.net/api/admin/project-list");
 
-        // Check if project list is fetched successfully
+        // ✅ Check if project list response is valid
         System.out.println("Project List Response: " + projectListResponse.getBody().asString());
-        Assert.assertEquals(projectListResponse.getStatusCode(), 200);
+        Assert.assertEquals(projectListResponse.getStatusCode(), 200, "❌ Failed to fetch project list!");
 
-        // Extract proposal_id of the latest project (top of the list)
+        // ✅ Extract proposal_id safely
+        if (projectListResponse.jsonPath().getList("data").isEmpty()) {
+            Assert.fail("❌ No projects found in project list!");
+        }
         String proposalId = projectListResponse.jsonPath().getString("data[0].id");
-        System.out.println("Extracted Proposal ID: " + proposalId);
+        System.out.println("✅ Extracted Proposal ID: " + proposalId);
 
-        // Get the project/Proposal response
+        // Fetch project proposal details
         Response get_project_proposal_response = given()
                 .header("Authorization", "Bearer " + adminToken)
                 .get("https://reno-dev.azurewebsites.net/api/project/get-projects?proposal_id=" + proposalId);
-        // Validate the response.
+
+        // ✅ Check if project proposal response is valid
         System.out.println("Project_Proposal List Response: " + get_project_proposal_response.getBody().asString());
-        Assert.assertEquals(get_project_proposal_response.getStatusCode(), 200);
+        Assert.assertEquals(get_project_proposal_response.getStatusCode(), 200, "❌ Failed to fetch project proposal!");
 
-        // Extract both project_id and proposal_id from the response
+        // ✅ Extract project ID safely
+        if (get_project_proposal_response.jsonPath().getList("data").isEmpty()) {
+            Assert.fail("❌ No projects found in project proposal response!");
+        }
         String projectId = get_project_proposal_response.jsonPath().getString("data[0].id");
-        System.out.println("Extracted Project ID: " + projectId);
+        System.out.println("✅ Extracted Project ID: " + projectId);
 
-        // Assign Contractor using both proposal_id (in URL) and project_id (in body)
+        // ✅ Assign Contractor using extracted IDs
         assignContractor(projectId, proposalId);
     }
 
     public void assignContractor(String projectId, String proposalId) {
         // Get the Admin Token
         String adminToken = AuthHelper.getAdminToken();
+
+        // ✅ Check if projectId and proposalId are valid before proceeding
+        if (projectId == null || projectId.isEmpty()) {
+            Assert.fail("❌ Project ID is missing or invalid!");
+        }
+        if (proposalId == null || proposalId.isEmpty()) {
+            Assert.fail("❌ Proposal ID is missing or invalid!");
+        }
 
         // Assign contractor API call
         Response response = given()
@@ -74,8 +91,8 @@ public class HomeOwner_Create_Project {
                 .body("{\"project_id\": " + projectId + ", \"contractor_ids\": [61], \"action\": \"assign\"}")
                 .post("https://reno-dev.azurewebsites.net/api/admin/proposal/" + proposalId + "/action");
 
-        // Print the response
+        // ✅ Validate contractor assignment response
         System.out.println("Assign Contractor Response: " + response.getBody().asString());
-        Assert.assertEquals(response.getStatusCode(), 200);
+        Assert.assertEquals(response.getStatusCode(), 200, "❌ Contractor assignment failed!");
     }
 }
