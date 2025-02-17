@@ -6,6 +6,8 @@ import utils.AuthHelper;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.restassured.RestAssured.given;
 
@@ -114,69 +116,58 @@ public class HomeOwner_Create_Project {
         Assert.assertEquals(getProjectResponse.getStatusCode(), 200);
         System.out.println("**********P R O J E C T - C R E A T I O N - S T A R T E D***********");
 
-        // Milestone Creation.
-        // Get current date in required format (YYYY-MM-DD)
-        LocalDate startDate = LocalDate.now();
-        LocalDate endDate = startDate.plusDays(10);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        // Define number of milestones and budget items in per milestone
+        int numberOfMilestones = 5;
+        int numberOfBudgetItems = 5;
 
-        String formattedStartDate = startDate.format(formatter);
-        String formattedEndDate = endDate.format(formatter);
+        List<Integer> milestoneIds = new ArrayList<>(); // To store the Milestone ID's
 
-        // API Call to create milestone
-        Response Milestone_response = given()
-                .header("Authorization", "Bearer " + contractorToken)
-                .contentType("application/json")
-                .body("{\"proposalId\": " + proposalId +
-                        ", \"milestoneName\": \"Test Milestone Number One\", " +
-                        "\"description\": \"Test Milestone Number One\", " +
-                        "\"startDate\": \"" + formattedStartDate + "\", " +
-                        "\"endDate\": \"" + formattedEndDate + "\", " +
-                        "\"tags\": \"Renovation\"}")
-                .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/milestone");
+        LocalDate startDate = LocalDate.now(); // For set the current date for milestone
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // Date Format
 
-        // Print Response
-        System.out.println("Milestone Creation Response: " + Milestone_response.getBody().asString());
-        Assert.assertEquals(Milestone_response.getStatusCode(), 201, "❌ Project creation failed!");
+        for (int i = 1; i <= numberOfMilestones; i++) {
+            String milestoneName = "Test Milestone Number " + i;
+            String formattedStartDate = startDate.format(formatter);
+            String formattedEndDate = startDate.plusDays(10).format(formatter);
 
-        // Click on the Save and Continue button comes on the milestone screen.
-        // Hit GET API to fetch project details using proposal_id
-        Response ProjectResponseMilestone = given()
-                .header("Authorization", "Bearer " + contractorToken)
-                .get("https://reno-dev.azurewebsites.net/api/project/get-projects?proposal_id=" + proposalId);
-        // Print and validate response
-        System.out.println("Proposal_Response_Milestone: " + ProjectResponseMilestone.getBody().asString());
-        Assert.assertEquals(ProjectResponseMilestone.getStatusCode(), 200);
+            Response milestoneResponse = given()
+                    .header("Authorization", "Bearer " + contractorToken)
+                    .contentType("application/json")
+                    .body("{\"proposalId\": " + proposalId + ", \"milestoneName\": \"" + milestoneName + "\", " +
+                            "\"description\": \"" + milestoneName + "\", " +
+                            "\"startDate\": \"" + formattedStartDate + "\", " +
+                            "\"endDate\": \"" + formattedEndDate + "\", " +
+                            "\"tags\": \"Renovation\"}")
+                    .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/milestone");
 
-        // Extract milestoneId from response
-        JsonPath jsonPath = Milestone_response.jsonPath();
-        int milestoneId = jsonPath.getInt("milestoneId");
-        System.out.println("Extracted Milestone ID: " + milestoneId);
+            Assert.assertEquals(milestoneResponse.getStatusCode(), 201, "❌ Milestone creation failed!");
 
-        // Call createBudgetItem with milestoneId
-        createBudgetItem(milestoneId);
+            int milestoneId = milestoneResponse.jsonPath().getInt("milestoneId");
+            milestoneIds.add(milestoneId);
+        }
+        System.out.println("*********** MILESTONES CREATED SUCCESSFULLY *************");
+        // For creation budget items for each milestone
+        for (int milestoneId : milestoneIds) {
+            for (int j = 1; j <= numberOfBudgetItems; j++) {
+                String budgetName = "Test Budget Number " + j;
 
-    }
-    public void createBudgetItem(int milestoneId) {
-        String contractorToken = AuthHelper.getContractorToken();
-        // API Call to create budget item
-        Response Budget_response = given()
-                .header("Authorization", "Bearer " + contractorToken)
-                .contentType("application/json")
-                .body("{\"name\": \"Test Budget Number 1\", " +
-                        "\"milestoneId\": " + milestoneId + ", " +
-                        "\"materialType\": \"Wood\", " +
-                        "\"materialUnit\": \"item\", " +
-                        "\"materialUnitPrice\": \"80\", " +
-                        "\"quantity\": \"2\", " +
-                        "\"specification\": \"Test Budget Number 1\", " +
-                        "\"manpowerRate\": 100, " +
-                        "\"days\": 2}")
-                .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/budget-item");
+                Response budgetResponse = given()
+                        .header("Authorization", "Bearer " + contractorToken)
+                        .contentType("application/json")
+                        .body("{\"name\": \"" + budgetName + "\", " +
+                                "\"milestoneId\": " + milestoneId + ", " +
+                                "\"materialType\": \"Wood\", " +
+                                "\"materialUnit\": \"item\", " +
+                                "\"materialUnitPrice\": \"80\", " +
+                                "\"quantity\": \"2\", " +
+                                "\"specification\": \"" + budgetName + "\", " +
+                                "\"manpowerRate\": 100, " +
+                                "\"days\": 2}")
+                        .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/budget-item");
+                Assert.assertEquals(budgetResponse.getStatusCode(), 201, "❌ Budget creation failed!");
+                System.out.println("*********** BUDGET ITEMS CREATED SUCCESSFULLY *************");
 
-        System.out.println("Budget Item Creation Response: " + Budget_response.getBody().asString());
-        Assert.assertEquals(Budget_response.getStatusCode(), 201, "❌ Budget creation failed!");
-
-
+            }
+        }
     }
 }
