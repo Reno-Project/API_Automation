@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.restassured.RestAssured.given;
 
@@ -151,6 +152,11 @@ public class HomeOwner_Create_Project {
             for (int j = 1; j <= numberOfBudgetItems; j++) {
                 String budgetName = "Test Budget Number " + j;
 
+                int materialUnitPrice = ThreadLocalRandom.current().nextInt(50, 200);
+                int quantity = ThreadLocalRandom.current().nextInt(1, 10);
+                int manpowerRate = ThreadLocalRandom.current().nextInt(300, 700);
+                int days = ThreadLocalRandom.current().nextInt(5, 30);
+
                 Response budgetResponse = given()
                         .header("Authorization", "Bearer " + contractorToken)
                         .contentType("application/json")
@@ -158,16 +164,20 @@ public class HomeOwner_Create_Project {
                                 "\"milestoneId\": " + milestoneId + ", " +
                                 "\"materialType\": \"Wood\", " +
                                 "\"materialUnit\": \"item\", " +
-                                "\"materialUnitPrice\": \"80\", " +
-                                "\"quantity\": \"2\", " +
+                                "\"materialUnitPrice\": " + materialUnitPrice + ", " +
+                                "\"quantity\": " + quantity + ", " +
                                 "\"specification\": \"" + budgetName + "\", " +
-                                "\"manpowerRate\": 100, " +
-                                "\"days\": 2}")
+                                "\"manpowerRate\": " + manpowerRate + ", " +
+                                "\"days\": " + days + "}")
                         .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/budget-item");
                 Assert.assertEquals(budgetResponse.getStatusCode(), 201, "❌ Budget creation failed!");
-                System.out.println("*********** BUDGET ITEMS CREATED SUCCESSFULLY *************");
-
             }
-        }
+}            System.out.println("*********** Budget Item Successfully Created**********");
+        Response get_Project_Response_With_Milestone_Budget = given()
+                .header("Authorization", "Bearer " + contractorToken)
+                .get("https://reno-dev.azurewebsites.net/api/project/get-projects?proposal_id=" + proposalId);
+        // Print and validate response
+        System.out.println("Proposal_Response: " + get_Project_Response_With_Milestone_Budget.getBody().asString());
+        Assert.assertEquals(get_Project_Response_With_Milestone_Budget.getStatusCode(), 200);
     }
 }
