@@ -3,7 +3,7 @@ import io.restassured.response.Response;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import utils.AuthHelper;
-
+import java.util.UUID;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -22,13 +22,13 @@ public class HomeOwner_Create_Project {
         Response projectResponse = given()
                 .header("Authorization", "Bearer " + homeOwnerToken)
                 .header("X-Account-ID", "")
-                .multiPart("name", "API Automation Sarthak")
+                .multiPart("name", "API Automation Sarthak Test")
                 .multiPart("project_type", "Kitchen")
                 .multiPart("start_date", "February 03, 2025")
                 .multiPart("end_date", "February 24, 2025")
                 .multiPart("description", "Test To Check Automation Project Flow")
                 .multiPart("exp_id", "2")
-                .multiPart("form_json", "{\"appliances\":{\"new_Layouts\":[],\"builtin_appliances\":true,\"new_appliances\":false,\"selected_appliances\":[]},\"kitchenDesignSummary\":{\"data\":{\"projectName\":\"API Automation Sarthak\",\"projectDescription\":\"Test To Check Automation Flow\",\"projectLocation\":\"Dubai\",\"projectSubLocationName\":\"Dubai\",\"projectSubLocation\":\"Dubai\"," +
+                .multiPart("form_json", "{\"appliances\":{\"new_Layouts\":[],\"builtin_appliances\":true,\"new_appliances\":false,\"selected_appliances\":[]},\"kitchenDesignSummary\":{\"data\":{\"projectName\":\"API Automation Sarthak Test\",\"projectDescription\":\"Test To Check Automation Flow\",\"projectLocation\":\"Dubai\",\"projectSubLocationName\":\"Dubai\",\"projectSubLocation\":\"Dubai\"," +
                         "\"projectType\":\"Kitchen\",\"kitchenLayout\":\"peninsula\",\"size\":\"20\",\"kitchenNewLayout\":[],\"appliances\":[],\"budget\":\"standard\",\"startDate\":\"2025-02-03\",\"endDate\":\"2025-02-24\",\"images\":[],\"builtin_appliances\":true,\"new_appliances\":false," +
                         "\"isLand\":false,\"newLayouts\":false,\"newLighting\":true,\"newFloor\":true,\"cabinets\":true,\"counterTops\":true,\"doorsWindow\":false," +
                         "\"cabinetsWrapping\":true,\"counterTopsWraping\":false}},\"budget_value\":\"3,657\"}")
@@ -145,6 +145,7 @@ public class HomeOwner_Create_Project {
 
             int milestoneId = milestoneResponse.jsonPath().getInt("milestoneId");
             milestoneIds.add(milestoneId);
+
         }
         System.out.println("*********** MILESTONES CREATED SUCCESSFULLY *************");
         // For creation budget items for each milestone
@@ -172,12 +173,49 @@ public class HomeOwner_Create_Project {
                         .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/budget-item");
                 Assert.assertEquals(budgetResponse.getStatusCode(), 201, "❌ Budget creation failed!");
             }
-}            System.out.println("*********** Budget Item Successfully Created**********");
+}
+        System.out.println("*********** Budget Item Successfully Created**********");
         Response get_Project_Response_With_Milestone_Budget = given()
                 .header("Authorization", "Bearer " + contractorToken)
                 .get("https://reno-dev.azurewebsites.net/api/project/get-projects?proposal_id=" + proposalId);
         // Print and validate response
         System.out.println("Proposal_Response: " + get_Project_Response_With_Milestone_Budget.getBody().asString());
         Assert.assertEquals(get_Project_Response_With_Milestone_Budget.getStatusCode(), 200);
-    }
+
+        System.out.println("*********************** Creating Payment Group ***********************************");
+// Generate dueDate from the last milestone's end date
+        String lastMilestoneEndDate = startDate.minusDays(5).format(formatter);  // last milestone ka endDate
+        String groupId = UUID.randomUUID().toString();  // Generate a random groupId
+        System.out.println("GroupID:--" + groupId);
+// Create milestones JSON array
+        StringBuilder milestonesJson = new StringBuilder("[");
+        for (int i = 0; i < milestoneIds.size(); i++) {
+            milestonesJson.append("{\"milestoneId\": ").append(milestoneIds.get(i)).append("}");
+            if (i < milestoneIds.size() - 1) {
+                milestonesJson.append(", ");
+            }
+        }
+        milestonesJson.append("]");
+
+// Create final request body
+        String requestBody = "{ \"milestones\": " + milestonesJson + ", " +
+                "\"paymentGroup\": {\"groupId\": \"" + groupId + "\", " +  // Add groupId
+                "\"groupName\": \"Payment Group Created With Automation\", " +
+                "\"refId\": \"" + proposalId + "\", " +
+                "\"refType\": \"proposal\", " +
+                "\"type\": \"PAYMENT_GROUP\", " +
+                "\"dueDate\": \"" + lastMilestoneEndDate + "\"}}";  // Use last milestone's end date
+
+        System.out.println("Payment Group Request Body: " + requestBody);
+
+        Response paymentGroupResponse = given()
+                .header("Authorization", "Bearer " + contractorToken)
+                .contentType("application/json")
+                .body(requestBody)
+                .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/payment-group");
+        System.out.println("Full Payment Group Response: \n" + paymentGroupResponse.jsonPath().prettyPrint());
+        Assert.assertEquals(paymentGroupResponse.getStatusCode(), 200, "❌ Payment Group creation failed!");
+
+
+        }
 }
