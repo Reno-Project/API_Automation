@@ -1,8 +1,12 @@
-import io.restassured.path.json.JsonPath;
+
 import io.restassured.response.Response;
+import org.json.JSONObject;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import utils.AuthHelper;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.UUID;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -237,5 +241,70 @@ public class HomeOwner_Create_Project {
         Assert.assertEquals(sendProposalResponse.getStatusCode(), 200, "❌ Sending proposal to admin failed!");
 
         System.out.println("✅ Proposal sent to Admin for Approval!");
+        commissionDetails(projectId);
     }
+    public void commissionDetails(String projectId) {
+        String adminToken = AuthHelper.getAdminToken();
+
+        Response response = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("https://reno-dev.azurewebsites.net/api/admin/project-list?total=0&pageSize=20&current=1&status=awaiting-approval")
+                .then()
+                .extract()
+                .response();
+
+        if (response.statusCode() == 200) {
+            JSONObject jsonResponse = new JSONObject(response.asString());
+            if (jsonResponse.getJSONArray("data").length() > 0) {
+                JSONObject firstProject = jsonResponse.getJSONArray("data").getJSONObject(0);
+                double projectCost = firstProject.getDouble("total_amount");
+
+                System.out.println("Project Cost: " + projectCost);
+
+                double initialDeposit = round(projectCost * 0.10);  // 10%
+                double projectCompletion = round(projectCost * 0.05); // 5%
+                double warrantyCompletion = round(projectCost * 0.10); // 10%
+                double renoCommission = round(projectCost * 0.05); // 5%
+
+                JSONObject payoutPayload = new JSONObject();
+                payoutPayload.put("Initial_deposit_needed_by_contractor", initialDeposit);
+                payoutPayload.put("initial_deposit", initialDeposit);
+                payoutPayload.put("completion_of_the_warranty_period", warrantyCompletion);
+                payoutPayload.put("contractor_fees", renoCommission);
+                payoutPayload.put("project_completion", projectCompletion);
+                payoutPayload.put("warranty_period", warrantyCompletion);
+                payoutPayload.put("warranty_period_unit", "MONTHS");
+
+                System.out.println("Payout Payload: " + payoutPayload.toString(4));
+
+
+                Response getFilesResponse = given()
+                        .header("Authorization", "Bearer " + adminToken)
+                        .get("https://reno-dev.azurewebsites.net/api/project/files/" + projectId + "?type=contractor");
+
+                System.out.println("Project Files Response: " + getFilesResponse.getBody().asString());
+                Assert.assertEquals(getFilesResponse.getStatusCode(), 200, "❌ Failed to fetch project files!");
+
+                // to call the payouts api
+                Response postResponse = given()
+                        .header("Authorization", "Bearer " + adminToken)
+                        .header("Content-Type", "application/json")
+                        .body(payoutPayload.toString()) // Convert JSONObject to String
+                        .when()
+                        .post("https://reno-core-api-test.azurewebsites.net/api/v2/contractors/proposals/" + firstProject.getInt("id")+"/payouts")
+                        .then()
+                        .extract()
+                        .response();
+
+                System.out.println("POST Response: " + postResponse.getBody().asString());
+                Assert.assertEquals(postResponse.getStatusCode(), 200, "❌ Failed to save payout details!");
+            }
+        }
+    }
+    private double round(double value) {
+        return new BigDecimal(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
+    }
+
+
 }
