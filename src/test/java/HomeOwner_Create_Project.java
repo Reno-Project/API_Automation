@@ -257,6 +257,7 @@ public class HomeOwner_Create_Project {
                 .extract()
                 .response();
 
+        int proposalId = 0;
         if (response.statusCode() == 200) {
             JSONObject jsonResponse = new JSONObject(response.asString());
             if (jsonResponse.getJSONArray("data").length() > 0) {
@@ -269,7 +270,7 @@ public class HomeOwner_Create_Project {
                 System.out.println("Extracted Project ID: " + projectID);
 
                 // Extract proposal ID
-                int proposalId = firstProject.has("proposal_id") ? firstProject.getInt("proposal_id") : -1;
+                proposalId = firstProject.has("proposal_id") ? firstProject.getInt("proposal_id") : -1;
                 System.out.println("Extracted Proposal ID: " + proposalId);
 
                 if (proposalId == -1) {
@@ -319,9 +320,9 @@ public class HomeOwner_Create_Project {
                         .response();
 
                 System.out.println("POST Response: " + postResponse.getBody().asString());
-                if(postResponse.getStatusCode() == 200){
+                if (postResponse.getStatusCode() == 200) {
                     System.out.println("The project payouts created successfully");
-                }else {
+                } else {
                     Assert.fail("❌ Failed to save payout details!");
                 }
 
@@ -351,20 +352,75 @@ public class HomeOwner_Create_Project {
                         .response();
 
                 System.out.println("PUT Response: " + putResponse.getBody().asString());
-                if (putResponse.getStatusCode() == 200){
+                if (putResponse.getStatusCode() == 200) {
                     System.out.println("✅ Request sent to Contractor");
-                }else {
+                } else {
                     Assert.fail("❌ API success false — Request not sent to the contractor.");
                 }
 
             }
         }
+        Approve_commissionDetails(String.valueOf(proposalId));
     }
 
     private double round(double value) {
         return new BigDecimal(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
 
+    public void Approve_commissionDetails(String proposalId) {
+        String contractorToken = AuthHelper.getContractorToken();
 
+        //GET project details using proposalId
+        Response getProjectResponse = given()
+                .header("Authorization", "Bearer " + contractorToken)
+                .when()
+                .get("https://reno-dev.azurewebsites.net/api/project/get-projects?proposal_id=" + proposalId)
+                .then()
+                .extract()
+                .response();
+
+        System.out.println("For_Approve_CommissionDetails ------------> " + proposalId);
+        System.out.println(getProjectResponse.getBody().asString());
+
+        if (getProjectResponse.getStatusCode() == 200) {
+            System.out.println("✅ Approve Commission Details Fetched Successfully");
+
+            //Extract project_id from response
+            JSONObject jsonResponse = new JSONObject(getProjectResponse.getBody().asString());
+            if (jsonResponse.has("data") && jsonResponse.getJSONArray("data").length() > 0) {
+                int projectId = jsonResponse.getJSONArray("data").getJSONObject(0).getInt("id");
+                System.out.println("Extracted Project ID for Approval: " + projectId);
+
+                //Prepare payload
+                JSONObject payload = new JSONObject();
+                payload.put("project_id", projectId);
+                payload.put("status", "approve");
+
+                //Call PUT API to approve
+                Response approveResponse = given()
+                        .header("Authorization", "Bearer " + contractorToken)
+                        .header("Content-Type", "application/json")
+                        .body(payload.toString())
+                        .when()
+                        .put("https://reno-dev.azurewebsites.net/api/project/status")
+                        .then()
+                        .extract()
+                        .response();
+
+                //Print and validate
+                System.out.println("PUT Approval Response: " + approveResponse.getBody().asString());
+
+                Assert.assertEquals(approveResponse.getStatusCode(), 200, "❌ Failed to approve project!");
+                Assert.assertTrue(approveResponse.asString().contains("success"), "❌ Approval not successful!");
+                System.out.println("✅ Project Approved Successfully!");
+
+            } else {
+                Assert.fail("❌ No project found in GET response for proposalId: " + proposalId);
+            }
+
+        } else {
+            Assert.fail("❌ Failed to fetch approve commission details");
+        }
+    }
 
 }
