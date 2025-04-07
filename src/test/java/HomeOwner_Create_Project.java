@@ -1,5 +1,6 @@
 
 import io.restassured.response.Response;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.put;
 
 public class HomeOwner_Create_Project {
     @Test
@@ -241,11 +243,12 @@ public class HomeOwner_Create_Project {
         Assert.assertEquals(sendProposalResponse.getStatusCode(), 200, "❌ Sending proposal to admin failed!");
 
         System.out.println("✅ Proposal sent to Admin for Approval!");
-        commissionDetails(projectId);
+     commissionDetails();
     }
-    public void commissionDetails(String projectId) {
+    public void commissionDetails() {
         String adminToken = AuthHelper.getAdminToken();
 
+        // Fetch Project Data
         Response response = given()
                 .header("Authorization", "Bearer " + adminToken)
                 .when()
@@ -258,15 +261,33 @@ public class HomeOwner_Create_Project {
             JSONObject jsonResponse = new JSONObject(response.asString());
             if (jsonResponse.getJSONArray("data").length() > 0) {
                 JSONObject firstProject = jsonResponse.getJSONArray("data").getJSONObject(0);
+
+                System.out.println("Full Project JSON: " + firstProject.toString(4));
+
+                // Extract correct project ID
+                int projectID = firstProject.has("project_id") ? firstProject.getInt("project_id") : firstProject.getInt("id");
+                System.out.println("Extracted Project ID: " + projectID);
+
+                // Extract proposal ID
+                int proposalId = firstProject.has("proposal_id") ? firstProject.getInt("proposal_id") : -1;
+                System.out.println("Extracted Proposal ID: " + proposalId);
+
+                if (proposalId == -1) {
+                    System.out.println("❌ Proposal ID not found, skipping API calls.");
+                    return;
+                }
+
                 double projectCost = firstProject.getDouble("total_amount");
 
                 System.out.println("Project Cost: " + projectCost);
 
+                // Calculate payout amounts
                 double initialDeposit = round(projectCost * 0.10);  // 10%
                 double projectCompletion = round(projectCost * 0.05); // 5%
                 double warrantyCompletion = round(projectCost * 0.10); // 10%
                 double renoCommission = round(projectCost * 0.05); // 5%
 
+                //Create Payout Payload for POST API
                 JSONObject payoutPayload = new JSONObject();
                 payoutPayload.put("Initial_deposit_needed_by_contractor", initialDeposit);
                 payoutPayload.put("initial_deposit", initialDeposit);
@@ -278,33 +299,72 @@ public class HomeOwner_Create_Project {
 
                 System.out.println("Payout Payload: " + payoutPayload.toString(4));
 
-
+                //Fetch Project Files
                 Response getFilesResponse = given()
                         .header("Authorization", "Bearer " + adminToken)
-                        .get("https://reno-dev.azurewebsites.net/api/project/files/" + projectId + "?type=contractor");
+                        .get("https://reno-dev.azurewebsites.net/api/project/files/" + projectID + "?type=contractor");
 
                 System.out.println("Project Files Response: " + getFilesResponse.getBody().asString());
                 Assert.assertEquals(getFilesResponse.getStatusCode(), 200, "❌ Failed to fetch project files!");
 
-                // to call the payouts api
+                //POST API for Payouts using proposalId
                 Response postResponse = given()
                         .header("Authorization", "Bearer " + adminToken)
                         .header("Content-Type", "application/json")
-                        .body(payoutPayload.toString()) // Convert JSONObject to String
+                        .body(payoutPayload.toString())
                         .when()
-                        .post("https://reno-core-api-test.azurewebsites.net/api/v2/contractors/proposals/" + firstProject.getInt("id")+"/payouts")
+                        .post("https://reno-core-api-test.azurewebsites.net/api/v2/contractors/proposals/" + proposalId + "/payouts")
                         .then()
                         .extract()
                         .response();
 
                 System.out.println("POST Response: " + postResponse.getBody().asString());
-                Assert.assertEquals(postResponse.getStatusCode(), 200, "❌ Failed to save payout details!");
+                if(postResponse.getStatusCode() == 200){
+                    System.out.println("The project payouts created successfully");
+                }else {
+                    Assert.fail("❌ Failed to save payout details!");
+                }
+
+                //Prepare dynamic payouts list for PUT API
+                JSONArray payoutsArray = new JSONArray();
+                payoutsArray.put(new JSONObject().put("type", "PAYMENT_GROUP").put("payoutPercent", 70));
+                payoutsArray.put(new JSONObject().put("type", "PROJECT_INITIAL_DEPOSIT").put("payoutPercent", 10));
+                payoutsArray.put(new JSONObject().put("type", "PROJECT_COMPLETION").put("payoutPercent", 5));
+                payoutsArray.put(new JSONObject().put("type", "PROJECT_WARRANTY_COMPLETION").put("payoutPercent", 10));
+                payoutsArray.put(new JSONObject().put("type", "RENO_COMMISSION").put("payoutPercent", 5));
+
+                //Create Payload for PUT API
+                JSONObject putPayload = new JSONObject(payoutPayload.toString());
+                putPayload.put("payouts", payoutsArray);
+                putPayload.put("deposit_for_delay_guarantees", 5);
+                putPayload.put("weekly_delay", 1);
+
+                //Call PUT API to update fees using projectID
+                Response putResponse = given()
+                        .header("Authorization", "Bearer " + adminToken)
+                        .header("Content-Type", "application/json")
+                        .body(putPayload.toString())
+                        .when()
+                        .put("https://reno-dev.azurewebsites.net/api/admin/fees/" + projectID)
+                        .then()
+                        .extract()
+                        .response();
+
+                System.out.println("PUT Response: " + putResponse.getBody().asString());
+                if (putResponse.getStatusCode() == 200){
+                    System.out.println("✅ Request sent to Contractor");
+                }else {
+                    Assert.fail("❌ API success false — Request not sent to the contractor.");
+                }
+
             }
         }
     }
+
     private double round(double value) {
         return new BigDecimal(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
+
 
 
 }
