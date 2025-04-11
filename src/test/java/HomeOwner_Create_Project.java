@@ -27,13 +27,13 @@ public class HomeOwner_Create_Project {
         Response projectResponse = given()
                 .header("Authorization", "Bearer " + homeOwnerToken)
                 .header("X-Account-ID", "")
-                .multiPart("name", "API Automation Sarthak")
+                .multiPart("name", "API Automation Sarthak NEW")
                 .multiPart("project_type", "Kitchen")
                 .multiPart("start_date", "February 03, 2025")
                 .multiPart("end_date", "February 24, 2025")
                 .multiPart("description", "Test To Check Automation Project Flow")
                 .multiPart("exp_id", "2")
-                .multiPart("form_json", "{\"appliances\":{\"new_Layouts\":[],\"builtin_appliances\":true,\"new_appliances\":false,\"selected_appliances\":[]},\"kitchenDesignSummary\":{\"data\":{\"projectName\":\"API Automation Sarthak\",\"projectDescription\":\"Test To Check Automation Flow\",\"projectLocation\":\"Dubai\",\"projectSubLocationName\":\"Dubai\",\"projectSubLocation\":\"Dubai\"," +
+                .multiPart("form_json", "{\"appliances\":{\"new_Layouts\":[],\"builtin_appliances\":true,\"new_appliances\":false,\"selected_appliances\":[]},\"kitchenDesignSummary\":{\"data\":{\"projectName\":\"API Automation Sarthak NEW\",\"projectDescription\":\"Test To Check Automation Flow\",\"projectLocation\":\"Dubai\",\"projectSubLocationName\":\"Dubai\",\"projectSubLocation\":\"Dubai\"," +
                         "\"projectType\":\"Kitchen\",\"kitchenLayout\":\"peninsula\",\"size\":\"20\",\"kitchenNewLayout\":[],\"appliances\":[],\"budget\":\"standard\",\"startDate\":\"2025-02-03\",\"endDate\":\"2025-02-24\",\"images\":[],\"builtin_appliances\":true,\"new_appliances\":false," +
                         "\"isLand\":false,\"newLayouts\":false,\"newLighting\":true,\"newFloor\":true,\"cabinets\":true,\"counterTops\":true,\"doorsWindow\":false," +
                         "\"cabinetsWrapping\":true,\"counterTopsWraping\":false}},\"budget_value\":\"3,657\"}")
@@ -586,5 +586,95 @@ public class HomeOwner_Create_Project {
             } else {
                 System.out.println("❌ Failed to update project status.");
             }
+            proposeToCustomer();
+        }
+    public void proposeToCustomer() {
+        String adminToken = AuthHelper.getAdminToken();
+
+        // Fetch awaiting-review project
+        Response response = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("https://reno-dev.azurewebsites.net/api/admin/project-list?total=0&pageSize=20&current=1&status=awaiting-review")
+                .then()
+                .extract()
+                .response();
+
+        if (response.statusCode() == 200) {
+            JSONObject jsonResponse = new JSONObject(response.asString());
+            JSONArray dataArray = jsonResponse.getJSONArray("data");
+
+            if (dataArray.length() > 0) {
+                JSONObject firstProject = dataArray.getJSONObject(0);
+
+                int proposalId = firstProject.getInt("id");
+                int projectId = firstProject.getInt("project_id");
+
+                System.out.println("✅ Found Project:");
+                System.out.println("Proposal ID: " + proposalId);
+                System.out.println("Project ID: " + projectId);
+
+                // Call get-projects API
+                Response getProjectResponse = given()
+                        .header("Authorization", "Bearer " + adminToken)
+                        .when()
+                        .get("https://reno-dev.azurewebsites.net/api/project/get-projects?proposal_id=" + proposalId)
+                        .then()
+                        .extract()
+                        .response();
+
+                System.out.println("✅ GET /get-projects Response:\n" + getProjectResponse.asPrettyString());
+
+                // ✅GET call for OTP Trigger API
+                Response otpResponse = given()
+                        .header("Authorization", "Bearer " + adminToken)
+                        .when()
+                        .get("https://reno-dev.azurewebsites.net/api/project/approve-proposal-otp")
+                        .then()
+                        .extract()
+                        .response();
+
+                System.out.println("✅ OTP Trigger Response: " + otpResponse.asPrettyString());
+
+                if (otpResponse.statusCode() == 200) {
+                    // Fetch OTP from DB
+                    String otp = OTPHelper.fetchLatestOTPFromDB();
+                    System.out.println("✅ OTP Fetched from DB: " + otp);
+
+                    // Approve project using OTP
+                    JSONObject putPayload = new JSONObject();
+                    putPayload.put("project_id", projectId);
+                    putPayload.put("status", "approve");
+                    putPayload.put("approved_by", "sarthak.bansal@renohome.ae");
+                    putPayload.put("otp", otp);
+
+                    Response putResponse = given()
+                            .header("Authorization", "Bearer " + adminToken)
+                            .header("Content-Type", "application/json")
+                            .body(putPayload.toString())
+                            .when()
+                            .put("https://reno-dev.azurewebsites.net/api/project/status")
+                            .then()
+                            .extract()
+                            .response();
+
+                    System.out.println("✅ PUT /status Response:\n" + putResponse.asPrettyString());
+
+                    if (putResponse.statusCode() == 200) {
+                        System.out.println("🎉 Project approved successfully!");
+                    } else {
+                        System.out.println("❌ Failed to approve project.");
+                    }
+                } else {
+                    System.out.println("❌ OTP trigger failed.");
+                }
+            } else {
+                System.out.println("❌ No 'awaiting-review' projects found.");
+            }
+        } else {
+            System.out.println("❌ Failed to fetch projects.");
         }
     }
+
+
+}

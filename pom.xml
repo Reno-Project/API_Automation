@@ -40,6 +40,12 @@
             <artifactId>json</artifactId>
             <version>20210307</version>
         </dependency>
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>12.2.0.jre11</version> <!-- jre11 ya tu JDK version ke hisab se choose kar -->
+        </dependency>
+
 
         <!-- JSON Parsing -->
         <dependency>
