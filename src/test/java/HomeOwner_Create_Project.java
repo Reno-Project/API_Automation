@@ -22,18 +22,19 @@ public class HomeOwner_Create_Project {
     public void testCreateProjectAndAssignContractor() {
         // Get the HomeOwner Token
         String homeOwnerToken = AuthHelper.getHomeOwnerToken();
-
+        long randomNumber = System.currentTimeMillis() % 100000;
+        String dynamicProjectName = "Project_Number: " + randomNumber;
         // Create the project
         Response projectResponse = given()
                 .header("Authorization", "Bearer " + homeOwnerToken)
                 .header("X-Account-ID", "")
-                .multiPart("name", "API Automation Sarthak NEW")
+                .multiPart("name", dynamicProjectName)
                 .multiPart("project_type", "Kitchen")
                 .multiPart("start_date", "February 03, 2025")
                 .multiPart("end_date", "February 24, 2025")
                 .multiPart("description", "Test To Check Automation Project Flow")
                 .multiPart("exp_id", "2")
-                .multiPart("form_json", "{\"appliances\":{\"new_Layouts\":[],\"builtin_appliances\":true,\"new_appliances\":false,\"selected_appliances\":[]},\"kitchenDesignSummary\":{\"data\":{\"projectName\":\"API Automation Sarthak NEW\",\"projectDescription\":\"Test To Check Automation Flow\",\"projectLocation\":\"Dubai\",\"projectSubLocationName\":\"Dubai\",\"projectSubLocation\":\"Dubai\"," +
+                .multiPart("form_json", "{\"appliances\":{\"new_Layouts\":[],\"builtin_appliances\":true,\"new_appliances\":false,\"selected_appliances\":[]},\"kitchenDesignSummary\":{\"data\":{\"projectName\":\"" + dynamicProjectName + "\",\"projectDescription\":\"Test To Check Automation Flow\",\"projectLocation\":\"Dubai\",\"projectSubLocationName\":\"Dubai\",\"projectSubLocation\":\"Dubai\"," +
                         "\"projectType\":\"Kitchen\",\"kitchenLayout\":\"peninsula\",\"size\":\"20\",\"kitchenNewLayout\":[],\"appliances\":[],\"budget\":\"standard\",\"startDate\":\"2025-02-03\",\"endDate\":\"2025-02-24\",\"images\":[],\"builtin_appliances\":true,\"new_appliances\":false," +
                         "\"isLand\":false,\"newLayouts\":false,\"newLighting\":true,\"newFloor\":true,\"cabinets\":true,\"counterTops\":true,\"doorsWindow\":false," +
                         "\"cabinetsWrapping\":true,\"counterTopsWraping\":false}},\"budget_value\":\"3,657\"}")
@@ -42,8 +43,10 @@ public class HomeOwner_Create_Project {
                 .multiPart("status", "submitted")
                 .post("https://reno-dev.azurewebsites.net/api/project/create-project");
 
+
         // ✅ Check project creation response
         System.out.println("Project Response: " + projectResponse.getBody().asString());
+        System.out.println("🚀 Submitting Project With Name: " + dynamicProjectName);
         Assert.assertEquals(projectResponse.getStatusCode(), 200, "❌ Project creation failed!");
 
         // Get Admin Token
