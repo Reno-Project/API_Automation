@@ -254,7 +254,6 @@ public class HomeOwner_Create_Project {
         // Fetch Project Data
         Response response = given()
                 .header("Authorization", "Bearer " + adminToken)
-                .when()
                 .get("https://reno-dev.azurewebsites.net/api/admin/project-list?total=0&pageSize=20&current=1&status=awaiting-approval")
                 .then()
                 .extract()
@@ -268,11 +267,9 @@ public class HomeOwner_Create_Project {
 
                 System.out.println("Full Project JSON: " + firstProject.toString(4));
 
-                // Extract correct project ID
                 int projectID = firstProject.has("project_id") ? firstProject.getInt("project_id") : firstProject.getInt("id");
                 System.out.println("Extracted Project ID: " + projectID);
 
-                // Extract proposal ID
                 proposalId = firstProject.has("proposal_id") ? firstProject.getInt("proposal_id") : -1;
                 System.out.println("Extracted Proposal ID: " + proposalId);
 
@@ -282,28 +279,43 @@ public class HomeOwner_Create_Project {
                 }
 
                 double projectCost = firstProject.getDouble("total_amount");
-
                 System.out.println("Project Cost: " + projectCost);
 
-                // Calculate payout amounts
-                double initialDeposit = round(projectCost * 0.10);  // 10%
-                double projectCompletion = round(projectCost * 0.05); // 5%
-                double warrantyCompletion = round(projectCost * 0.10); // 10%
-                double renoCommission = round(projectCost * 0.05); // 5%
+                double initialDepositPercent = 10;
+                double projectCompletionPercent = 5;
+                double warrantyCompletionPercent = 5;
+                double renoCommissionPercent = 5;
+                double weeklyDelayPercent = 1;
+                double depositForDelayGuaranteesPercent = 5;
 
-                //Create Payout Payload for POST API
+                double fixedPercentTotal = initialDepositPercent + projectCompletionPercent + warrantyCompletionPercent
+                        + renoCommissionPercent + weeklyDelayPercent + depositForDelayGuaranteesPercent;
+
+                double contractorFeePercent = 100 - fixedPercentTotal;
+
+                System.out.println("Final Split:");
+                System.out.println("Initial Deposit: " + initialDepositPercent + "%");
+                System.out.println("Project Completion: " + projectCompletionPercent + "%");
+                System.out.println("Warranty Completion: " + warrantyCompletionPercent + "%");
+                System.out.println("Reno Commission: " + renoCommissionPercent + "%");
+                System.out.println("Weekly Delay: " + weeklyDelayPercent + "%");
+                System.out.println("Deposit For Delay Guarantee: " + depositForDelayGuaranteesPercent + "%");
+                System.out.println("Contractor Fees: " + contractorFeePercent + "%");
+
                 JSONObject payoutPayload = new JSONObject();
-                payoutPayload.put("Initial_deposit_needed_by_contractor", initialDeposit);
-                payoutPayload.put("initial_deposit", initialDeposit);
-                payoutPayload.put("completion_of_the_warranty_period", warrantyCompletion);
-                payoutPayload.put("contractor_fees", renoCommission);
-                payoutPayload.put("project_completion", projectCompletion);
-                payoutPayload.put("warranty_period", warrantyCompletion);
+                payoutPayload.put("Initial_deposit_needed_by_contractor", initialDepositPercent);
+                payoutPayload.put("initial_deposit", initialDepositPercent);
+                payoutPayload.put("completion_of_the_warranty_period", warrantyCompletionPercent);
+                payoutPayload.put("contractor_fees", contractorFeePercent);
+                payoutPayload.put("project_completion", projectCompletionPercent);
+                payoutPayload.put("warranty_period", warrantyCompletionPercent);
                 payoutPayload.put("warranty_period_unit", "MONTHS");
+                payoutPayload.put("deposit_for_delay_guarantees", depositForDelayGuaranteesPercent);
+                payoutPayload.put("weekly_delay", weeklyDelayPercent);
+                payoutPayload.put("reno_fee", renoCommissionPercent);
 
-                System.out.println("Payout Payload: " + payoutPayload.toString(4));
+                System.out.println("Final Payload:\n" + payoutPayload.toString(4));
 
-                //Fetch Project Files
                 Response getFilesResponse = given()
                         .header("Authorization", "Bearer " + adminToken)
                         .get("https://reno-dev.azurewebsites.net/api/project/files/" + projectID + "?type=contractor");
@@ -311,7 +323,6 @@ public class HomeOwner_Create_Project {
                 System.out.println("Project Files Response: " + getFilesResponse.getBody().asString());
                 Assert.assertEquals(getFilesResponse.getStatusCode(), 200, "❌ Failed to fetch project files!");
 
-                //POST API for Payouts using proposalId
                 Response postResponse = given()
                         .header("Authorization", "Bearer " + adminToken)
                         .header("Content-Type", "application/json")
@@ -323,13 +334,13 @@ public class HomeOwner_Create_Project {
                         .response();
 
                 System.out.println("POST Response: " + postResponse.getBody().asString());
+
                 if (postResponse.getStatusCode() == 200) {
-                    System.out.println("The project payouts created successfully");
+                    System.out.println("✅ The project payouts created successfully");
                 } else {
                     Assert.fail("❌ Failed to save payout details!");
                 }
 
-                //Prepare dynamic payouts list for PUT API
                 JSONArray payoutsArray = new JSONArray();
                 payoutsArray.put(new JSONObject().put("type", "PAYMENT_GROUP").put("payoutPercent", 70));
                 payoutsArray.put(new JSONObject().put("type", "PROJECT_INITIAL_DEPOSIT").put("payoutPercent", 10));
@@ -337,13 +348,11 @@ public class HomeOwner_Create_Project {
                 payoutsArray.put(new JSONObject().put("type", "PROJECT_WARRANTY_COMPLETION").put("payoutPercent", 10));
                 payoutsArray.put(new JSONObject().put("type", "RENO_COMMISSION").put("payoutPercent", 5));
 
-                //Create Payload for PUT API
                 JSONObject putPayload = new JSONObject(payoutPayload.toString());
                 putPayload.put("payouts", payoutsArray);
                 putPayload.put("deposit_for_delay_guarantees", 5);
                 putPayload.put("weekly_delay", 1);
 
-                //Call PUT API to update fees using projectID
                 Response putResponse = given()
                         .header("Authorization", "Bearer " + adminToken)
                         .header("Content-Type", "application/json")
@@ -360,7 +369,6 @@ public class HomeOwner_Create_Project {
                 } else {
                     Assert.fail("❌ API success false — Request not sent to the contractor.");
                 }
-
             }
         }
         Approve_commissionDetails(String.valueOf(proposalId));
@@ -369,6 +377,7 @@ public class HomeOwner_Create_Project {
     private double round(double value) {
         return new BigDecimal(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
+
 
     public void Approve_commissionDetails(String proposalId) {
         String contractorToken = AuthHelper.getContractorToken();
