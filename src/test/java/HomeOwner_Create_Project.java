@@ -797,7 +797,43 @@ public class HomeOwner_Create_Project {
                     .response();
 
             System.out.println("✅ Save Contract Response: " + saveContractResponse.asString());
+            // OTP Trigger for approve Sign contract
+            try {
+                Response otpTrigger = given()
+                        .header("Authorization", "Bearer " + adminToken)
+                        .header("Content-Type", "application/json")
+                        .post("https://reno-dev.azurewebsites.net/api/project/approve-contract-otp")
+                        .then()
+                        .extract().response();
 
+                System.out.println("✅ OTP Triggered: " + otpTrigger.asString());
+// Short wait for DB to update
+                Thread.sleep(9000);
+// OTP Fetch
+                String latestOtp = OTPHelper.fetchLatestOTPFromDB();
+                System.out.println("✅ OTP from DB: " + latestOtp);
+            } catch (Exception e) {
+                System.out.println("❌ Exception at Approve Contract OTP API: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            String latestProofId = OTPHelper.fetchLatestClientIdProofId();
+            String latestOTP = OTPHelper.fetchLatestOTPFromDB();
+            if (latestOTP == null || latestOTP.isEmpty()) {
+                System.out.println("❌ OTP not found in DB, cannot approve contract.");
+                return;
+            }
+            Response contractApprovalResponse = given()
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType("application/json")
+                    .body("{\"otp\":\"" + latestOTP + "\"}")
+                    .when()
+                    .post("https://reno-dev.azurewebsites.net/api/project/approve-contract/" + latestProofId)
+                    .then()
+                    .extract()
+                    .response();
+
+            System.out.println("✅ Contract Approval Response: " + contractApprovalResponse.asString());
         } else {
             System.out.println("❌ No proposed-to-client project found.");
         }
