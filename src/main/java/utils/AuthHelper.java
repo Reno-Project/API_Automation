@@ -30,7 +30,7 @@ public class AuthHelper {
     // Public method to fetch Admin Token
     public static String getAdminToken() {
         if (adminToken == null) {
-            adminToken = fetchToken("reno12@mailinator.com", "Demo@123", "reno");
+            adminToken = fetchToken("sarthak.bansal@renohome.ae", "Demo@123", "reno");
             System.out.println("Generated Admin Token: " + adminToken);
         }
         return adminToken;

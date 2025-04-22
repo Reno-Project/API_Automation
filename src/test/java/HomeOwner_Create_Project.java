@@ -1,4 +1,7 @@
 
+import io.restassured.RestAssured;
+import io.restassured.filter.log.RequestLoggingFilter;
+import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.response.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -6,6 +9,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 import utils.AuthHelper;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.UUID;
@@ -685,6 +689,117 @@ public class HomeOwner_Create_Project {
             }
         } else {
             System.out.println("❌ Failed to fetch projects.");
+        }
+        proposedToClientContractSign();
+    }
+    public void proposedToClientContractSign() {
+        String adminToken = AuthHelper.getAdminToken();
+
+        // Fetch proposed-to-client project
+        Response response = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("https://reno-dev.azurewebsites.net/api/admin/project-list?total=0&pageSize=20&current=1&status=proposed-to-client")
+                .then()
+                .extract()
+                .response();
+
+        JSONObject jsonResponse = new JSONObject(response.asString());
+        JSONArray dataArray = jsonResponse.getJSONArray("data");
+
+        if (dataArray.length() > 0) {
+            int projectId = dataArray.getJSONObject(0).getInt("id");
+            int proposalId = dataArray.getJSONObject(0).getInt("proposal_id");
+            double proposalCost = dataArray.getJSONObject(0).getDouble("proposal_cost");
+            int ClintID = dataArray.getJSONObject(0).getInt("client_id");
+            System.out.println("✅ Project ID Found: " + projectId);
+            System.out.println("✅ Proposal ID Found: " + proposalId);
+            System.out.println("✅ Proposal Cost Found: " + proposalCost);
+            System.out.println("✅ Clint ID : " + ClintID);
+
+            // Call Get Project Details API
+            Response projectDetailsResponse = given()
+                    .header("Authorization", "Bearer " + adminToken)
+                    .when()
+                    .get("https://reno-dev.azurewebsites.net//api/project/get-project-details?project_id=" + projectId)
+                    .then()
+                    .extract()
+                    .response();
+
+            System.out.println("✅ Project Details Response: " + projectDetailsResponse.asString());
+
+            // Call Workflow Step API
+            Response workflowResponse = given()
+                    .header("Authorization", "Bearer " + adminToken)
+                    .when()
+                    .get("https://reno-core-api-test.azurewebsites.net/api/v2/steps/workflow/PROJECT_POST_PROPOSAL?refId=" + projectId + "&refType=project")
+                    .then()
+                    .extract()
+                    .response();
+
+            System.out.println("✅ Workflow Step Response: " + workflowResponse.asString());
+
+            // Call KYB Documents API
+            Response kybResponse = given()
+                    .header("Authorization", "Bearer " + adminToken)
+                    .when()
+                    .get("https://reno-dev.azurewebsites.net/api/user/project/" + projectId + "/kyb-documents")
+                    .then()
+                    .extract()
+                    .response();
+
+            System.out.println("✅ KYB Documents Response: " + kybResponse.asString());
+
+            // Call the Client ID proof
+            File signedContract = new File("C:\\Users\\SARTHAK\\IdeaProjects\\API_Automation\\src\\test\\resource\\test-files/NEW.pdf");
+            System.out.println("📄 File Exists: " + signedContract.exists());
+            if (!signedContract.exists()) {
+                System.out.println("❌ Signed contract file does not exist!");
+                return;
+            }
+
+            try {
+                RestAssured.filters(new RequestLoggingFilter(), new ResponseLoggingFilter());
+                Response clientIdProofResponse = given()
+                        .header("Authorization", "Bearer " + adminToken)
+                        .multiPart("proposal_id", String.valueOf(proposalId))
+                        .multiPart("signed_contract", signedContract, "application/pdf")
+                        .when()
+                        .post("https://reno-dev.azurewebsites.net/api/project/client-id-proof")
+                        .then()
+                        .extract()
+                        .response();
+
+                System.out.println("✅ Client ID Proof Response: " + clientIdProofResponse.asString());
+            } catch (Exception e) {
+                System.out.println("❌ Exception at Client ID Proof API: " + e.getMessage());
+                e.printStackTrace();
+            }
+        // Call the save contract API
+            JSONObject saveContractPayload = new JSONObject();
+            saveContractPayload.put("customerName", "Sarthak Bansal");
+            saveContractPayload.put("customerAddress", "Dubai");
+            saveContractPayload.put("customerType", "Individual");
+            saveContractPayload.put("amount", proposalCost);
+            saveContractPayload.put("projectId", projectId);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            saveContractPayload.put("signedDate", LocalDate.now().format(formatter));
+            saveContractPayload.put("userId", ClintID);
+
+            Response saveContractResponse = given()
+                    .header("Authorization", "Bearer " + adminToken)
+                    .header("Content-Type", "application/json")
+                    .body(saveContractPayload.toString())
+                    .when()
+                    .post("https://reno-core-api-test.azurewebsites.net/api/v2/contracts/save")
+                    .then()
+                    .extract()
+                    .response();
+
+            System.out.println("✅ Save Contract Response: " + saveContractResponse.asString());
+
+        } else {
+            System.out.println("❌ No proposed-to-client project found.");
         }
     }
 
