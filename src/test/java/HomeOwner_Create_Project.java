@@ -12,6 +12,7 @@ import utils.AuthHelper;
 import java.io.File;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Map;
 import java.util.UUID;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -22,24 +23,42 @@ import java.util.concurrent.ThreadLocalRandom;
 import static io.restassured.RestAssured.given;
 
 public class HomeOwner_Create_Project {
-    @Test
-    public void testCreateProjectAndAssignContractor() {
-        // Get the HomeOwner Token
-        String homeOwnerToken = AuthHelper.getHomeOwnerToken();
+
+    String homeOwnerToken;
+    String dynamicProjectName;
+    String startDate;
+    String endDate;
+    String adminToken;
+    String projectId;
+    String proposalId;
+
+    @Test(priority = 1)
+    public void createProject() {
+        homeOwnerToken = AuthHelper.getHomeOwnerToken();
+
         long randomNumber = System.currentTimeMillis() % 100000;
-        String dynamicProjectName = "Project_Number: " + randomNumber;
-        // Create the project
+        dynamicProjectName = "Project_Number: " + randomNumber;
+
+        LocalDate today = LocalDate.now();
+        LocalDate nextMonth = today.plusMonths(1);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        startDate = today.format(formatter);
+        endDate = nextMonth.format(formatter);
+
+        System.out.println("Project Name: " + dynamicProjectName);
+        System.out.println("Start Date: " + startDate);
+        System.out.println("End Date: " + endDate);
+
         Response projectResponse = given()
                 .header("Authorization", "Bearer " + homeOwnerToken)
-                .header("X-Account-ID", "")
                 .multiPart("name", dynamicProjectName)
                 .multiPart("project_type", "Kitchen")
-                .multiPart("start_date", "February 03, 2025")
-                .multiPart("end_date", "February 24, 2025")
+                .multiPart("start_date", startDate)
+                .multiPart("end_date", endDate)
                 .multiPart("description", "Test To Check Automation Project Flow")
                 .multiPart("exp_id", "2")
                 .multiPart("form_json", "{\"appliances\":{\"new_Layouts\":[],\"builtin_appliances\":true,\"new_appliances\":false,\"selected_appliances\":[]},\"kitchenDesignSummary\":{\"data\":{\"projectName\":\"" + dynamicProjectName + "\",\"projectDescription\":\"Test To Check Automation Flow\",\"projectLocation\":\"Dubai\",\"projectSubLocationName\":\"Dubai\",\"projectSubLocation\":\"Dubai\"," +
-                        "\"projectType\":\"Kitchen\",\"kitchenLayout\":\"peninsula\",\"size\":\"20\",\"kitchenNewLayout\":[],\"appliances\":[],\"budget\":\"standard\",\"startDate\":\"2025-02-03\",\"endDate\":\"2025-02-24\",\"images\":[],\"builtin_appliances\":true,\"new_appliances\":false," +
+                        "\"projectType\":\"Kitchen\",\"kitchenLayout\":\"peninsula\",\"size\":\"20\",\"kitchenNewLayout\":[],\"appliances\":[],\"budget\":\"standard\",\"startDate\":\"" + startDate + "\",\"endDate\":\"" + endDate + "\",\"images\":[],\"builtin_appliances\":true,\"new_appliances\":false," +
                         "\"isLand\":false,\"newLayouts\":false,\"newLighting\":true,\"newFloor\":true,\"cabinets\":true,\"counterTops\":true,\"doorsWindow\":false," +
                         "\"cabinetsWrapping\":true,\"counterTopsWraping\":false}},\"budget_value\":\"3,657\"}")
                 .multiPart("layout", "peninsula")
@@ -47,52 +66,84 @@ public class HomeOwner_Create_Project {
                 .multiPart("status", "submitted")
                 .post("https://reno-dev.azurewebsites.net/api/project/create-project");
 
+        System.out.println("Project Creation Response: " + projectResponse.getBody().asString());
+        Assert.assertEquals(projectResponse.getStatusCode(), 200, "[TC_03] Project creation failed!");
+    }
 
-        // ✅ Check project creation response
-        System.out.println("Project Response: " + projectResponse.getBody().asString());
-        System.out.println("🚀 Submitting Project With Name: " + dynamicProjectName);
-        Assert.assertEquals(projectResponse.getStatusCode(), 200, "❌ Project creation failed!");
+    @Test(priority = 2, dependsOnMethods = "createProject")
+    public void validateStartAndEndDate() {
+        adminToken = AuthHelper.getAdminToken();
 
-        // Get Admin Token
-        String adminToken = AuthHelper.getAdminToken();
-
-        // Fetch project list
         Response projectListResponse = given()
                 .header("Authorization", "Bearer " + adminToken)
                 .get("https://reno-dev.azurewebsites.net/api/admin/project-list");
 
-        // ✅ Check if project list response is valid
-        System.out.println("Project List Response: " + projectListResponse.getBody().asString());
-        Assert.assertEquals(projectListResponse.getStatusCode(), 200, "❌ Failed to fetch project list!");
+        System.out.println("✅ Project List Response: " + projectListResponse.getBody().asString());
+        Assert.assertEquals(projectListResponse.getStatusCode(), 200, "Failed to fetch project list!");
 
-        // ✅ Extract proposal_id safely
-        if (projectListResponse.jsonPath().getList("data").isEmpty()) {
-            Assert.fail("❌ No projects found in project list!");
+        List<Map<String, Object>> projects = projectListResponse.jsonPath().getList("data");
+        boolean projectFound = false;
+        for (Map<String, Object> project : projects) {
+            String projectNameInResponse = (String) project.get("name");
+
+            if (projectNameInResponse != null && projectNameInResponse.equals(dynamicProjectName)) {
+                projectFound = true;
+
+                String startDateInResponse = (String) project.get("start_date");
+                String endDateInResponse = (String) project.get("end_date");
+
+                Object idObject = project.get("id");
+                if (idObject != null) {
+                    projectId = String.valueOf(idObject);
+                }
+
+                Map<String, Object> proposalData = (Map<String, Object>) project.get("proposal");
+                if (proposalData != null) {
+                    Object proposalIdObj = proposalData.get("id");
+                    if (proposalIdObj != null) {
+                        proposalId = String.valueOf(proposalIdObj);
+                    }
+                }
+
+                System.out.println("✅ Found Project Name: " + projectNameInResponse);
+                System.out.println("[TC_01] Expected Start Date: " + startDate + " | Actual Start Date: " + startDateInResponse);
+                System.out.println("[TC_02] Expected End Date: " + endDate + " | Actual End Date: " + endDateInResponse);
+
+                Assert.assertEquals(startDateInResponse, startDate, "[TC_01] Start date mismatch!");
+                Assert.assertEquals(endDateInResponse, endDate, "[TC_02] End date mismatch!");
+                break;
+            }
         }
-        String proposalId = projectListResponse.jsonPath().getString("data[0].id");
-        System.out.println("✅ Extracted Proposal ID: " + proposalId);
 
-        // Fetch project proposal details
-        Response get_project_proposal_response = given()
+
+        if (!projectFound) {
+            Assert.fail("Project with name " + dynamicProjectName + " not found in project list!");
+        }
+    }
+
+    @Test(priority = 3, dependsOnMethods = "validateStartAndEndDate")
+    public void fetchAndValidateProjectData() {
+        if (projectId == null || proposalId == null) {
+            Assert.fail("ProjectId or ProposalId not available to continue the flow!");
+        }
+
+        Response getProjectProposalResponse = given()
                 .header("Authorization", "Bearer " + adminToken)
                 .get("https://reno-dev.azurewebsites.net/api/project/get-projects?proposal_id=" + proposalId);
 
-        // ✅ Check if project proposal response is valid
-        System.out.println("Project_Proposal List Response: " + get_project_proposal_response.getBody().asString());
-        Assert.assertEquals(get_project_proposal_response.getStatusCode(), 200, "❌ Failed to fetch project proposal!");
+        System.out.println("Project Proposal List Response: " + getProjectProposalResponse.getBody().asString());
+        Assert.assertEquals(getProjectProposalResponse.getStatusCode(), 200, "Failed to fetch project proposal!");
 
-        // ✅ Extract project ID safely
-        if (get_project_proposal_response.jsonPath().getList("data").isEmpty()) {
-            Assert.fail("❌ No projects found in project proposal response!");
+        if (getProjectProposalResponse.jsonPath().getList("data").isEmpty()) {
+            Assert.fail("No projects found in project proposal response!");
         }
-        String projectId = get_project_proposal_response.jsonPath().getString("data[0].id");
-        System.out.println("✅ Extracted Project ID: " + projectId);
 
-        // ✅ Assign Contractor using extracted IDs
+        String projectIdFromProposal = getProjectProposalResponse.jsonPath().getString("data[0].id");
+        System.out.println("Extracted Project ID from Proposal API: " + projectIdFromProposal);
+
+        //Call the required methods
         assignContractor(projectId, proposalId);
-        // ✅ Assign proposalId to proposalCreation
         proposalCreation(proposalId);
-        // ✅ Assign projectId to sendProposalToAdmin
         sendProposalToAdmin(projectId);
     }
 
@@ -100,7 +151,7 @@ public class HomeOwner_Create_Project {
         // Get the Admin Token
         String adminToken = AuthHelper.getAdminToken();
 
-        // ✅ Check if projectId and proposalId are valid before proceeding
+        //Check if projectId and proposalId are valid before proceeding
         if (projectId == null || projectId.isEmpty()) {
             Assert.fail("❌ Project ID is missing or invalid!");
         }
