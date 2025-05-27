@@ -142,36 +142,52 @@ public class HomeOwner_Create_Project {
         System.out.println("Extracted Project ID from Proposal API: " + projectIdFromProposal);
 
         //Call the required methods
-        assignContractor(projectId, proposalId);
-        proposalCreation(proposalId);
-        sendProposalToAdmin(projectId);
+        assignContractor(projectIdFromProposal, proposalId);
+        proposalCreation(projectIdFromProposal,proposalId);
+        sendProposalToAdmin(projectIdFromProposal);
     }
 
-    public void assignContractor(String projectId, String proposalId) {
-        // Get the Admin Token
+    public void assignContractor(String projectIdFromProposal, String proposalId) {
+        //Get Admin Token
         String adminToken = AuthHelper.getAdminToken();
 
-        //Check if projectId and proposalId are valid before proceeding
+        //Validate IDs
         if (projectId == null || projectId.isEmpty()) {
-            Assert.fail("❌ Project ID is missing or invalid!");
+            Assert.fail("Project ID is missing or invalid!");
         }
         if (proposalId == null || proposalId.isEmpty()) {
-            Assert.fail("❌ Proposal ID is missing or invalid!");
+            Assert.fail("Proposal ID is missing or invalid!");
         }
 
-        // Assign contractor API call
+        //Log IDs before API call
+        System.out.println("Assigning contractor for:");
+        System.out.println("projectId: " + projectIdFromProposal);
+        System.out.println("proposalId: " + proposalId);
+
+        //Prepare body
+        String requestBody = "{ \"project_id\": " + projectIdFromProposal + ", \"contractor_ids\": [61], \"action\": \"assign\" }";
+
+        //Send POST request
         Response response = given()
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType("application/json")
-                .body("{\"project_id\": " + projectId + ", \"contractor_ids\": [61], \"action\": \"assign\"}")
+                .body(requestBody)
                 .post("https://reno-dev.azurewebsites.net/api/admin/proposal/" + proposalId + "/action");
 
-        // ✅ Validate contractor assignment response
-        System.out.println("Assign Contractor Response: " + response.getBody().asString());
-        Assert.assertEquals(response.getStatusCode(), 200, "❌ Contractor assignment failed!");
+        //Print response
+        System.out.println("Assign Contractor Response: " + response.getBody().asPrettyString());
+        System.out.println("Status Code: " + response.getStatusCode());
+
+        //Check success manually from response body also
+        if (response.getStatusCode() != 200 || !response.getBody().asString().contains("\"success\":true")) {
+            Assert.fail("Contractor assignment failed! Either project/proposal is invalid or already assigned.");
+        }
+
+        System.out.println("Contractor assigned successfully to project " + projectIdFromProposal);
     }
 
-    public void proposalCreation(String proposalId) {
+
+    public void proposalCreation(String projectIdFromproposalId,String proposalId) {
         // Get the contractor token
         String contractorToken = AuthHelper.getContractorToken();
         // Hit GET API to fetch project details using proposal_id
@@ -181,6 +197,30 @@ public class HomeOwner_Create_Project {
         // Print and validate response
         System.out.println("Proposal_Response: " + getProjectResponse.getBody().asString());
         Assert.assertEquals(getProjectResponse.getStatusCode(), 200);
+
+        // PATCH request payload
+        String payload = "{\n" +
+                "  \"project_id\": " + projectIdFromproposalId + ",\n" +
+                "  \"data\": {\n" +
+                "    \"client_type\": \"Homeowner\",\n" +
+                "    \"location\": \"Dubai Mall - Dubai - United Arab Emirates\",\n" +
+                "    \"scope\": \"Renovation\",\n" +
+                "    \"unit_type\": \"Villa\",\n" +
+                "    \"unit\": \"10\",\n" +
+                "    \"unit_size\": \"500\"\n" +
+                "  }\n" +
+                "}";
+        // Hit PATCH API
+        Response patchResponse = given()
+                .header("Authorization", "Bearer " + contractorToken)
+                .contentType("application/json")
+                .body(payload)
+                .patch("https://reno-dev.azurewebsites.net/api/admin/update-project-details");
+
+        // Print response
+        System.out.println("Update Project PATCH Response: " + patchResponse.getBody().asString());
+        Assert.assertEquals(patchResponse.getStatusCode(), 200, "Failed to update project details!");
+
         System.out.println("**********P R O J E C T - C R E A T I O N - S T A R T E D***********");
 
         // Define number of milestones and budget items in per milestone
@@ -285,8 +325,8 @@ public class HomeOwner_Create_Project {
 
     }
 
-    public void sendProposalToAdmin(String projectId) {
-        String url = "https://reno-dev.azurewebsites.net/api/project/update-status/" + projectId;
+    public void sendProposalToAdmin(String projectIdFromProposal) {
+        String url = "https://reno-dev.azurewebsites.net/api/project/update-status/" + projectIdFromProposal;
         String contractorToken = AuthHelper.getContractorToken();
         System.out.println("Final API URL: " + url);
 
@@ -299,7 +339,7 @@ public class HomeOwner_Create_Project {
         System.out.println("Send Proposal Response: " + sendProposalResponse.getBody().asString());
         Assert.assertEquals(sendProposalResponse.getStatusCode(), 200, "❌ Sending proposal to admin failed!");
 
-        System.out.println("✅ Proposal sent to Admin for Approval!");
+        System.out.println("Proposal sent to Admin to add the Commission Details!");
         commissionDetails();
     }
 
@@ -325,7 +365,7 @@ public class HomeOwner_Create_Project {
                 int projectID = firstProject.has("project_id") ? firstProject.getInt("project_id") : firstProject.getInt("id");
                 System.out.println("Extracted Project ID: " + projectID);
 
-                proposalId = firstProject.has("proposal_id") ? firstProject.getInt("proposal_id") : -1;
+                proposalId = firstProject.has("proposal_id") ? firstProject.getInt("id") : -1;
                 System.out.println("Extracted Proposal ID: " + proposalId);
 
                 if (proposalId == -1) {
@@ -422,7 +462,7 @@ public class HomeOwner_Create_Project {
                 if (putResponse.getStatusCode() == 200) {
                     System.out.println("✅ Request sent to Contractor");
                 } else {
-                    Assert.fail("❌ API success false — Request not sent to the contractor.");
+                    Assert.fail("❌API success false — Request not sent to the contractor.");
                 }
             }
         }
@@ -536,7 +576,7 @@ public class HomeOwner_Create_Project {
                     postPayload.put("proposalId", proposalId);
                     postPayload.put("proposalPrice", String.valueOf(proposalPrice));
                     postPayload.put("projectPaymentType", "RNPL");
-                    postPayload.put("proposalEndDt", "April 19, 2025");
+                    postPayload.put("proposalEndDt", "December 19, 2025");
 
                     JSONArray paymentPlanConfig = new JSONArray();
 
@@ -611,50 +651,152 @@ public class HomeOwner_Create_Project {
                 System.out.println("❌ Failed to fetch project list.");
             }
         }
-        public void fetchProjectDetailsByProposalId(String proposalId, int projectId) {
-            String adminToken = AuthHelper.getAdminToken();
+    public void fetchProjectDetailsByProposalId(String proposalId, int projectId) {
+        String adminToken = AuthHelper.getAdminToken();
 
-            Response response = given()
-                    .header("Authorization", "Bearer " + adminToken)
-                    .when()
-                    .get("https://reno-dev.azurewebsites.net/api/project/get-projects?proposal_id=" + proposalId)
-                    .then()
-                    .extract()
-                    .response();
+        //Project Details
+        Response projectDetailsResponse = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("https://reno-dev.azurewebsites.net/api/project/get-project-details?project_id=" + projectId)
+                .then()
+                .extract()
+                .response();
 
-            System.out.println("GET /project/get-projects?proposal_id=" + proposalId);
-            System.out.println("Response Code: " + response.getStatusCode());
-            System.out.println("Response Body: " + response.getBody().asPrettyString());
+        System.out.println("GET /project/get-project-details?project_id=" + projectId);
+        System.out.println("Response Code: " + projectDetailsResponse.getStatusCode());
+        System.out.println("Response Body: " + projectDetailsResponse.getBody().asPrettyString());
 
-            if (response.getStatusCode() == 200) {
-                System.out.println("✅ Project details fetched successfully from Admin side!");
-            } else {
-                Assert.fail("❌ Failed to fetch project details for proposal ID: " + proposalId);
-            }
-            JSONObject statusPayload = new JSONObject();
-            statusPayload.put("status", "awaiting-review");
-
-            Response statusUpdateResponse = given()
-                    .header("Authorization", "Bearer " + adminToken)
-                    .header("Content-Type", "application/json")
-                    .body(statusPayload.toString())
-                    .when()
-                    .put("https://reno-dev.azurewebsites.net/api/project/update-status/" + projectId)
-                    .then()
-                    .extract()
-                    .response();
-
-            System.out.println("PUT /project/update-status/" + projectId);
-            System.out.println("Response Code: " + statusUpdateResponse.getStatusCode());
-            System.out.println("Response Body: " + statusUpdateResponse.getBody().asPrettyString());
-
-            if (statusUpdateResponse.statusCode() == 200) {
-                System.out.println("✅ Project status updated to 'awaiting-review'.");
-            } else {
-                System.out.println("❌ Failed to update project status.");
-            }
-            proposeToCustomer();
+        if (projectDetailsResponse.getStatusCode() != 200) {
+            Assert.fail("❌ Failed to fetch project details for project ID: " + projectId);
         }
+
+        //KYB Documents
+        Response kybDocumentsResponse = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("https://reno-dev.azurewebsites.net/api/user/project/" + projectId + "/kyb-documents")
+                .then()
+                .extract()
+                .response();
+
+        System.out.println("GET /user/project/" + projectId + "/kyb-documents");
+        System.out.println("Response Code: " + kybDocumentsResponse.getStatusCode());
+        System.out.println("Response Body: " + kybDocumentsResponse.getBody().asPrettyString());
+
+        if (kybDocumentsResponse.getStatusCode() != 200) {
+            Assert.fail("❌ Failed to fetch KYB documents for project ID: " + projectId);
+        }
+
+        //Contract Details
+        Response contractDetailsResponse = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("https://reno-core-api-test.azurewebsites.net/api/v2/contracts/details/project/" + projectId)
+                .then()
+                .extract()
+                .response();
+
+        System.out.println("GET /contracts/details/project/" + projectId);
+        System.out.println("Response Code: " + contractDetailsResponse.getStatusCode());
+        System.out.println("Response Body: " + contractDetailsResponse.getBody().asPrettyString());
+
+        // Just log if contract exists or not, don’t fail
+        if (contractDetailsResponse.getStatusCode() == 400) {
+            System.out.println("🟡 Contract does not exist yet. Proceeding to create contract...");
+        } else if (contractDetailsResponse.getStatusCode() == 200) {
+            System.out.println("✅ Contract already exists for projectId: " + projectId);
+            // You can choose to exit early or continue based on your use-case
+        } else {
+            System.out.println("❌ Unexpected response while checking contract details. Status: " +
+                    contractDetailsResponse.getStatusCode());
+            // Optional: throw new RuntimeException or handle accordingly
+        }
+
+
+        //Payment Lines using proposalId directly
+        Response paymentLinesResponse = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .when()
+                .get("https://reno-core-api-test.azurewebsites.net/api/v2/paymentlines/proposal/" + proposalId)
+                .then()
+                .extract()
+                .response();
+
+        System.out.println("GET /paymentlines/proposal/" + proposalId);
+        System.out.println("Response Code: " + paymentLinesResponse.getStatusCode());
+        System.out.println("Response Body: " + paymentLinesResponse.getBody().asPrettyString());
+
+        if (paymentLinesResponse.getStatusCode() != 200) {
+            Assert.fail("❌ Failed to fetch payment lines for proposal ID: " + proposalId);
+        }
+
+        System.out.println("✅ All 4 API calls completed successfully.");
+        //POST Contract Details
+        JSONObject payload = new JSONObject();
+        payload.put("projectId", projectId);
+        payload.put("proposalId", Integer.parseInt(proposalId)); // convert String to int
+
+        JSONObject contractParty = new JSONObject();
+        contractParty.put("type", "INDIVIDUAL");
+        contractParty.put("hasPoa", false);
+        contractParty.put("signedAt", JSONObject.NULL);
+
+        JSONObject individual = new JSONObject();
+        individual.put("name", "Sarthak");
+        individual.put("address", "Test dubai");
+        individual.put("nationality", "Dubai");
+        individual.put("eid", "SARTH061799");
+        individual.put("passportNum", "SARTH061799");
+
+        contractParty.put("individual", individual);
+        payload.put("contractParty", contractParty);
+
+        Response postContractResponse = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .header("Content-Type", "application/json")
+                .body(payload.toString())
+                .when()
+                .post("https://reno-core-api-test.azurewebsites.net/api/v2/contracts/details")
+                .then()
+                .extract()
+                .response();
+
+        System.out.println("📩 POST /contracts/details");
+        System.out.println("Response Code: " + postContractResponse.getStatusCode());
+        System.out.println("Response Body: " + postContractResponse.getBody().asPrettyString());
+
+        if (postContractResponse.getStatusCode() != 200 && postContractResponse.getStatusCode() != 201) {
+            Assert.fail("❌ Failed to submit contract details.");
+        }
+
+        // 6️⃣ PUT Update Project Status
+        JSONObject statusPayload = new JSONObject();
+        statusPayload.put("status", "awaiting-review");
+
+        Response updateStatusResponse = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .header("Content-Type", "application/json")
+                .body(statusPayload.toString())
+                .when()
+                .put("https://reno-dev.azurewebsites.net/api/project/update-status/" + projectId)
+                .then()
+                .extract()
+                .response();
+
+        System.out.println("🔁 PUT /project/update-status/" + projectId);
+        System.out.println("Response Code: " + updateStatusResponse.getStatusCode());
+        System.out.println("Response Body: " + updateStatusResponse.getBody().asPrettyString());
+
+        if (updateStatusResponse.getStatusCode() != 200) {
+            Assert.fail("❌ Failed to update project status for project ID: " + projectId);
+        }
+
+        System.out.println("✅ Project status updated to 'awaiting-review' successfully.");
+        proposeToCustomer();
+    }
+
+
     public void proposeToCustomer() {
         String adminToken = AuthHelper.getAdminToken();
 
@@ -759,8 +901,8 @@ public class HomeOwner_Create_Project {
         JSONArray dataArray = jsonResponse.getJSONArray("data");
 
         if (dataArray.length() > 0) {
-            int projectId = dataArray.getJSONObject(0).getInt("id");
-            int proposalId = dataArray.getJSONObject(0).getInt("proposal_id");
+            int projectId = dataArray.getJSONObject(0).getInt("project_id");
+            int proposalId = dataArray.getJSONObject(0).getInt("id");
             double proposalCost = dataArray.getJSONObject(0).getDouble("proposal_cost");
             int ClintID = dataArray.getJSONObject(0).getInt("client_id");
             System.out.println("✅ Project ID Found: " + projectId);
@@ -801,6 +943,39 @@ public class HomeOwner_Create_Project {
 
             System.out.println("✅ KYB Documents Response: " + kybResponse.asString());
 
+            // Call Contract Details
+            Response contractDetailsResponse = given()
+                    .header("Authorization", "Bearer " + adminToken)
+                    .when()
+                    .get("https://reno-core-api-test.azurewebsites.net/api/v2/contracts/details/project/" + projectId)
+                    .then()
+                    .extract()
+                    .response();
+
+            System.out.println("GET /contracts/details/project/" + projectId);
+            System.out.println("Response Code: " + contractDetailsResponse.getStatusCode());
+            System.out.println("Response Body: " + contractDetailsResponse.getBody().asPrettyString());
+
+            if (contractDetailsResponse.getStatusCode() != 200) {
+                Assert.fail("❌ Failed to fetch contract details for project ID: " + projectId);
+            }
+            // Call Payment Lines using proposalId directly
+            Response paymentLinesResponse = given()
+                    .header("Authorization", "Bearer " + adminToken)
+                    .when()
+                    .get("https://reno-core-api-test.azurewebsites.net/api/v2/paymentlines/proposal/" + proposalId)
+                    .then()
+                    .extract()
+                    .response();
+
+            System.out.println("GET /paymentlines/proposal/" + proposalId);
+            System.out.println("Response Code: " + paymentLinesResponse.getStatusCode());
+            System.out.println("Response Body: " + paymentLinesResponse.getBody().asPrettyString());
+
+            if (paymentLinesResponse.getStatusCode() != 200) {
+                Assert.fail("❌ Failed to fetch payment lines for proposal ID: " + proposalId);
+            }
+
             // Call the Client ID proof
             File signedContract = new File("C:\\Users\\SARTHAK\\IdeaProjects\\API_Automation\\src\\test\\resource\\test-files/NEW.pdf");
             System.out.println("📄 File Exists: " + signedContract.exists());
@@ -827,27 +1002,22 @@ public class HomeOwner_Create_Project {
                 e.printStackTrace();
             }
         // Call the save contract API
-            JSONObject saveContractPayload = new JSONObject();
-            saveContractPayload.put("customerName", "Sarthak Bansal");
-            saveContractPayload.put("customerAddress", "Dubai");
-            saveContractPayload.put("customerType", "Individual");
-            saveContractPayload.put("amount", proposalCost);
-            saveContractPayload.put("projectId", projectId);
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            saveContractPayload.put("signedDate", LocalDate.now().format(formatter));
-            saveContractPayload.put("userId", ClintID);
+            JSONObject contractDetailsPayload = OTPHelper.fetchContractDetailsFromDB();
+            contractDetailsPayload.put("projectId", projectId);
+            contractDetailsPayload.put("proposalId", proposalId);
 
-            Response saveContractResponse = given()
+            Response Data_response = given()
                     .header("Authorization", "Bearer " + adminToken)
                     .header("Content-Type", "application/json")
-                    .body(saveContractPayload.toString())
+                    .body(contractDetailsPayload.toString())
                     .when()
-                    .post("https://reno-core-api-test.azurewebsites.net/api/v2/contracts/save")
+                    .post("https://reno-core-api-test.azurewebsites.net/api/v2/contracts/details")
                     .then()
                     .extract()
                     .response();
 
-            System.out.println("✅ Save Contract Response: " + saveContractResponse.asString());
+            System.out.println("✅ Contract Details API Response: " + Data_response.asString());
+
             // OTP Trigger for approve Sign contract
             try {
                 Response otpTrigger = given()
@@ -858,9 +1028,9 @@ public class HomeOwner_Create_Project {
                         .extract().response();
 
                 System.out.println("✅ OTP Triggered: " + otpTrigger.asString());
-// Short wait for DB to update
+                // Short wait for DB to update
                 Thread.sleep(9000);
-// OTP Fetch
+                 // OTP Fetch
                 String latestOtp = OTPHelper.fetchLatestOTPFromDB();
                 System.out.println("✅ OTP from DB: " + latestOtp);
             } catch (Exception e) {

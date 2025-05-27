@@ -38,15 +38,37 @@ public class AuthHelper {
 
     // Private helper method to fetch token
     private static String fetchToken(String email, String password, String deviceType) {
-        Response response = given()
-                .contentType(ContentType.JSON)
-                .body("{\"email\": \"" + email + "\", \"password\": \"" + password + "\", \"device_type\": \"" + deviceType + "\"}")
-                .post("https://reno-dev.azurewebsites.net/api/user/login");
+        // Optional: log payload for debugging
+        String requestBody = String.format(
+                "{\"email\": \"%s\", \"password\": \"%s\", \"device_type\": \"%s\"}",
+                email, password, deviceType
+        );
 
-        if (response.getStatusCode() != 200) {
-            throw new RuntimeException("Failed to get token for " + email + ": " + response.getStatusCode() + " - " + response.getBody().asString());
+        try {
+            Response response = given()
+                    .contentType(ContentType.JSON)
+                    .body(requestBody)
+                    .post("https://reno-dev.azurewebsites.net/api/user/login");
+
+            int statusCode = response.getStatusCode();
+            String responseBody = response.getBody().asString();
+
+            if (statusCode != 200) {
+                System.err.println("Login API failed with status: " + statusCode);
+                System.err.println("Response body: " + responseBody);
+                throw new RuntimeException("Failed to fetch token. Status: " + statusCode);
+            }
+
+            String token = response.jsonPath().getString("token");
+            if (token == null || token.isEmpty()) {
+                throw new RuntimeException("Token not found in response.");
+            }
+
+            return token;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Exception while fetching token: " + e.getMessage(), e);
         }
-
-        return response.jsonPath().getString("token");
     }
+
 }
