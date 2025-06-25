@@ -60,7 +60,7 @@ public class HomeOwner_Create_Project {
                 .multiPart("form_json", "{\"appliances\":{\"new_Layouts\":[],\"builtin_appliances\":true,\"new_appliances\":false,\"selected_appliances\":[]},\"kitchenDesignSummary\":{\"data\":{\"projectName\":\"" + dynamicProjectName + "\",\"projectDescription\":\"Test To Check Automation Flow\",\"projectLocation\":\"Dubai\",\"projectSubLocationName\":\"Dubai\",\"projectSubLocation\":\"Dubai\"," +
                         "\"projectType\":\"Kitchen\",\"kitchenLayout\":\"peninsula\",\"size\":\"20\",\"kitchenNewLayout\":[],\"appliances\":[],\"budget\":\"standard\",\"startDate\":\"" + startDate + "\",\"endDate\":\"" + endDate + "\",\"images\":[],\"builtin_appliances\":true,\"new_appliances\":false," +
                         "\"isLand\":false,\"newLayouts\":false,\"newLighting\":true,\"newFloor\":true,\"cabinets\":true,\"counterTops\":true,\"doorsWindow\":false," +
-                        "\"cabinetsWrapping\":true,\"counterTopsWraping\":false}},\"budget_value\":\"3,657\"}")
+                        "\"cabinetsWrapping\":true,\"counterTopsWraping\":false}},\"budget_value\":\"121,120\"}")
                 .multiPart("layout", "peninsula")
                 .multiPart("budget", "standard")
                 .multiPart("status", "submitted")
@@ -528,129 +528,104 @@ public class HomeOwner_Create_Project {
         } else {
             Assert.fail("❌ Failed to fetch approve commission details");
         }
-        Add_homeOwner_price();
+        addHomeOwnerPrice();
     }
-       public void Add_homeOwner_price() {
-            String adminToken = AuthHelper.getAdminToken();
+    public void addHomeOwnerPrice() {
+        final String adminBaseUrl = "https://reno-dev.azurewebsites.net";
+        final String coreBaseUrl  = "https://reno-core-api-test.azurewebsites.net";
+        final String adminToken   = AuthHelper.getAdminToken();
 
-            // Fetch first project with status = awaiting-project-pricing
-            Response response = given()
-                    .header("Authorization", "Bearer " + adminToken)
-                    .when()
-                    .get("https://reno-dev.azurewebsites.net/api/admin/project-list?total=0&pageSize=20&current=1&status=awaiting-project-pricing")
-                    .then()
-                    .extract()
-                    .response();
+        Response listResp = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .get(adminBaseUrl + "/api/admin/project-list?total=0&pageSize=20&current=1&status=awaiting-project-pricing")
+                .then().extract().response();
 
-            if (response.statusCode() == 200) {
-                JSONObject jsonResponse = new JSONObject(response.asString());
-                JSONArray dataArray = jsonResponse.getJSONArray("data");
-
-                if (dataArray.length() > 0) {
-                    JSONObject firstProject = dataArray.getJSONObject(0);
-                    int proposalId = firstProject.getInt("id");
-                    int projectId = firstProject.getInt("project_id");
-                    double totalAmount = firstProject.getDouble("total_amount");
-
-                    System.out.println("Proposal ID: " + proposalId);
-                    System.out.println("Project ID: " + projectId);
-                    System.out.println("Total Amount: " + totalAmount);
-
-                    // Add 10% to total amount
-                    double proposalPrice = round(totalAmount + (totalAmount * 0.10));
-                    System.out.println("Proposal Price (Total + 10%): " + proposalPrice);
-
-                    // Call GET API for payment plan
-                    Response planResponse = given()
-                            .header("Authorization", "Bearer " + adminToken)
-                            .when()
-                            .get("https://reno-core-api-test.azurewebsites.net/api/v2/payment-plan/proposal/" + proposalId)
-                            .then()
-                            .extract()
-                            .response();
-
-                    System.out.println("Plan GET Response: " + planResponse.asString());
-
-                    // POST API to set proposal view
-                    JSONObject postPayload = new JSONObject();
-                    postPayload.put("proposalId", proposalId);
-                    postPayload.put("proposalPrice", String.valueOf(proposalPrice));
-                    postPayload.put("projectPaymentType", "RNPL");
-                    postPayload.put("proposalEndDt", "December 19, 2025");
-
-                    JSONArray paymentPlanConfig = new JSONArray();
-
-                    paymentPlanConfig.put(new JSONObject()
-                            .put("planType", "MONTHS_3")
-                            .put("months", 3)
-                            .put("markup", 5)
-                            .put("downpayment", 30)
-                            .put("moveInPayment", 10));
-
-                    paymentPlanConfig.put(new JSONObject()
-                            .put("planType", "MONTHS_6")
-                            .put("months", 6)
-                            .put("markup", 10)
-                            .put("downpayment", 25)
-                            .put("moveInPayment", 10));
-
-                    paymentPlanConfig.put(new JSONObject()
-                            .put("planType", "MONTHS_12")
-                            .put("months", 12)
-                            .put("markup", 15)
-                            .put("downpayment", 10)
-                            .put("moveInPayment", 10));
-
-                    postPayload.put("paymentPlanConfig", paymentPlanConfig);
-
-                    Response postResponse = given()
-                            .header("Authorization", "Bearer " + adminToken)
-                            .header("Content-Type", "application/json")
-                            .body(postPayload.toString())
-                            .when()
-                            .post("https://reno-core-api-test.azurewebsites.net/api/v2/payment-plan/proposal/" + proposalId + "/view")
-                            .then()
-                            .extract()
-                            .response();
-
-                    System.out.println("POST Response: " + postResponse.asString());
-
-                    // PUT API to save homeowner price
-                    JSONObject putPayload = new JSONObject();
-                    putPayload.put("proposal_id", proposalId);
-                    putPayload.put("amount", String.valueOf(proposalPrice));
-                    putPayload.put("payment_type", "RNPL");
-                    putPayload.put("show_price", false);
-                    putPayload.put("payment_plan", paymentPlanConfig);
-
-                    Response putResponse = given()
-                            .header("Authorization", "Bearer " + adminToken)
-                            .header("Content-Type", "application/json")
-                            .body(putPayload.toString())
-                            .when()
-                            .put("https://reno-dev.azurewebsites.net/api/project/price")
-                            .then()
-                            .extract()
-                            .response();
-
-                    System.out.println("PUT Response: " + putResponse.asString());
-
-                    if (putResponse.statusCode() == 200) {
-                        System.out.println("✅ Homeowner price saved successfully!");
-                    } else {
-                        System.out.println("❌ Failed to save homeowner price.");
-                    }
-
-                    // Call get-projects API
-                    fetchProjectDetailsByProposalId(String.valueOf(proposalId), projectId);
-
-                } else {
-                    System.out.println("❌ No projects found with status awaiting-project-pricing.");
-                }
-            } else {
-                System.out.println("❌ Failed to fetch project list.");
-            }
+        if (listResp.statusCode() != 200) {
+            System.out.println("❌ Failed to fetch project list → " + listResp.asString());
+            return;
         }
+
+        JSONArray dataArr = new JSONObject(listResp.asString()).getJSONArray("data");
+        if (dataArr.isEmpty()) {
+            System.out.println("❌ No projects found with status awaiting-project-pricing.");
+            return;
+        }
+
+        JSONObject firstProject = dataArr.getJSONObject(0);
+        final int    proposalId  = firstProject.getInt("id");
+        final int    projectId   = firstProject.getInt("project_id");
+        final double totalAmount = Double.parseDouble(firstProject.get("total_amount").toString());
+        final double proposalPrice = round(totalAmount * 1.10);   // +10 %
+        final String proposalEndDt = "June 23, 2025";            // dummy date sample
+
+        System.out.printf("👉 Using proposalId=%d | projectId=%d | price=%.2f%n", proposalId, projectId, proposalPrice);
+
+        JSONArray paymentPlanConfig = new JSONArray()
+                .put(new JSONObject()
+                        .put("planType", "MONTHS_3")
+                        .put("months", 3)
+                        .put("markup", 5)
+                        .put("downpayment", 30)
+                        .put("moveInPayment", 10)
+                        .put("projectPaymentType", "RNPL"))
+                .put(new JSONObject()
+                        .put("planType", "MONTHS_6")
+                        .put("months", 6)
+                        .put("markup", 10)
+                        .put("downpayment", 25)
+                        .put("moveInPayment", 10)
+                        .put("projectPaymentType", "RNPL"))
+                .put(new JSONObject()
+                        .put("planType", "MONTHS_12")
+                        .put("months", 12)
+                        .put("markup", 15)
+                        .put("downpayment", 10)
+                        .put("moveInPayment", 10)
+                        .put("projectPaymentType", "RNPL"))
+                .put(new JSONObject()                          // CUSTOM / ESCROW
+                        .put("planType", "CUSTOM")
+                        .put("months", 0)
+                        .put("markup", 0)
+                        .put("downpayment", 50)
+                        .put("moveInPayment", 20)
+                        .put("projectPaymentType", "ESCROW"));
+
+
+        JSONObject viewPayload = new JSONObject()
+                .put("proposalId", proposalId)
+                .put("proposalPrice", String.valueOf(proposalPrice))
+                .put("proposalEndDt", proposalEndDt)
+                .put("paymentPlanConfig", paymentPlanConfig);
+
+        Response viewResp = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType("application/json")
+                .body(viewPayload.toString())
+                .post(coreBaseUrl + "/api/v2/payment-plan/proposal/" + proposalId + "/view");
+
+        System.out.println("/view response → " + viewResp.asString());
+
+        JSONObject putPayload = new JSONObject()
+                .put("proposal_id", proposalId)
+                .put("amount", String.valueOf(proposalPrice))
+                .put("payment_type", "RNPL")   // business still tags RNPL as master type
+                .put("show_price", false)
+                .put("payment_plan", paymentPlanConfig);
+
+        Response putResp = given()
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType("application/json")
+                .body(putPayload.toString())
+                .put(adminBaseUrl + "/api/project/price");
+
+        if (putResp.statusCode() == 200) {
+            System.out.println("✅ Homeowner price saved successfully!");
+        } else {
+            System.out.println("❌ Failed to save price → " + putResp.asString());
+        }
+
+        fetchProjectDetailsByProposalId(String.valueOf(proposalId), projectId);
+    }
     public void fetchProjectDetailsByProposalId(String proposalId, int projectId) {
         String adminToken = AuthHelper.getAdminToken();
 
@@ -665,7 +640,7 @@ public class HomeOwner_Create_Project {
 
         System.out.println("GET /project/get-project-details?project_id=" + projectId);
         System.out.println("Response Code: " + projectDetailsResponse.getStatusCode());
-        System.out.println("Response Body: " + projectDetailsResponse.getBody().asPrettyString());
+        System.out.println("Response Body: " + projectDetailsResponse.getBody().asString());
 
         if (projectDetailsResponse.getStatusCode() != 200) {
             Assert.fail("❌ Failed to fetch project details for project ID: " + projectId);
