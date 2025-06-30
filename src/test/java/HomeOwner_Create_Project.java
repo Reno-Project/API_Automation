@@ -78,7 +78,7 @@ public class HomeOwner_Create_Project {
                 .header("Authorization", "Bearer " + adminToken)
                 .get("https://reno-dev.azurewebsites.net/api/admin/project-list");
 
-        System.out.println("✅ Project List Response: " + projectListResponse.getBody().asString());
+        System.out.println("Project List Response: " + projectListResponse.getBody().asString());
         Assert.assertEquals(projectListResponse.getStatusCode(), 200, "Failed to fetch project list!");
 
         List<Map<String, Object>> projects = projectListResponse.jsonPath().getList("data");
@@ -105,7 +105,7 @@ public class HomeOwner_Create_Project {
                     }
                 }
 
-                System.out.println("✅ Found Project Name: " + projectNameInResponse);
+                System.out.println("Found Project Name: " + projectNameInResponse);
                 System.out.println("[TC_01] Expected Start Date: " + startDate + " | Actual Start Date: " + startDateInResponse);
                 System.out.println("[TC_02] Expected End Date: " + endDate + " | Actual End Date: " + endDateInResponse);
 
@@ -247,7 +247,7 @@ public class HomeOwner_Create_Project {
                             "\"tags\": \"Renovation\"}")
                     .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/milestone");
 
-            Assert.assertEquals(milestoneResponse.getStatusCode(), 201, "❌ Milestone creation failed!");
+            Assert.assertEquals(milestoneResponse.getStatusCode(), 201, "Milestone creation failed!");
 
             int milestoneId = milestoneResponse.jsonPath().getInt("milestoneId");
             milestoneIds.add(milestoneId);
@@ -277,7 +277,7 @@ public class HomeOwner_Create_Project {
                                 "\"manpowerRate\": " + manpowerRate + ", " +
                                 "\"days\": " + days + "}")
                         .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/budget-item");
-                Assert.assertEquals(budgetResponse.getStatusCode(), 201, "❌ Budget creation failed!");
+                Assert.assertEquals(budgetResponse.getStatusCode(), 201, "Budget creation failed!");
             }
         }
         System.out.println("*********** Budget Item Successfully Created**********");
@@ -320,7 +320,7 @@ public class HomeOwner_Create_Project {
                 .body(requestBody)
                 .post("https://reno-core-api-test.azurewebsites.net/api/v2/project/payment-group");
         System.out.println("Full Payment Group Response: \n" + paymentGroupResponse.jsonPath().prettyPrint());
-        Assert.assertEquals(paymentGroupResponse.getStatusCode(), 200, "❌ Payment Group creation failed!");
+        Assert.assertEquals(paymentGroupResponse.getStatusCode(), 200, "Payment Group creation failed!");
         System.out.println("The Payment Group Created Successfully");
 
     }
@@ -337,7 +337,7 @@ public class HomeOwner_Create_Project {
                 .put(url);
 
         System.out.println("Send Proposal Response: " + sendProposalResponse.getBody().asString());
-        Assert.assertEquals(sendProposalResponse.getStatusCode(), 200, "❌ Sending proposal to admin failed!");
+        Assert.assertEquals(sendProposalResponse.getStatusCode(), 200, "Sending proposal to admin failed!");
 
         System.out.println("Proposal sent to Admin to add the Commission Details!");
         commissionDetails();
@@ -369,7 +369,7 @@ public class HomeOwner_Create_Project {
                 System.out.println("Extracted Proposal ID: " + proposalId);
 
                 if (proposalId == -1) {
-                    System.out.println("❌ Proposal ID not found, skipping API calls.");
+                    System.out.println("Proposal ID not found, skipping API calls.");
                     return;
                 }
 
@@ -416,7 +416,7 @@ public class HomeOwner_Create_Project {
                         .get("https://reno-dev.azurewebsites.net/api/project/files/" + projectID + "?type=contractor");
 
                 System.out.println("Project Files Response: " + getFilesResponse.getBody().asString());
-                Assert.assertEquals(getFilesResponse.getStatusCode(), 200, "❌ Failed to fetch project files!");
+                Assert.assertEquals(getFilesResponse.getStatusCode(), 200, "Failed to fetch project files!");
 
                 Response postResponse = given()
                         .header("Authorization", "Bearer " + adminToken)
@@ -431,9 +431,9 @@ public class HomeOwner_Create_Project {
                 System.out.println("POST Response: " + postResponse.getBody().asString());
 
                 if (postResponse.getStatusCode() == 200) {
-                    System.out.println("✅ The project payouts created successfully");
+                    System.out.println("The project payouts created successfully");
                 } else {
-                    Assert.fail("❌ Failed to save payout details!");
+                    Assert.fail("Failed to save payout details!");
                 }
 
                 JSONArray payoutsArray = new JSONArray();
@@ -460,9 +460,9 @@ public class HomeOwner_Create_Project {
 
                 System.out.println("PUT Response: " + putResponse.getBody().asString());
                 if (putResponse.getStatusCode() == 200) {
-                    System.out.println("✅ Request sent to Contractor");
+                    System.out.println("Request sent to Contractor");
                 } else {
-                    Assert.fail("❌API success false — Request not sent to the contractor.");
+                    Assert.fail("API success false — Request not sent to the contractor.");
                 }
             }
         }
@@ -490,7 +490,7 @@ public class HomeOwner_Create_Project {
         System.out.println(getProjectResponse.getBody().asString());
 
         if (getProjectResponse.getStatusCode() == 200) {
-            System.out.println("✅ Approve Commission Details Fetched Successfully");
+            System.out.println("Approve Commission Details Fetched Successfully");
 
             //Extract project_id from response
             JSONObject jsonResponse = new JSONObject(getProjectResponse.getBody().asString());
@@ -517,16 +517,16 @@ public class HomeOwner_Create_Project {
                 //Print and validate
                 System.out.println("PUT Approval Response: " + approveResponse.getBody().asString());
 
-                Assert.assertEquals(approveResponse.getStatusCode(), 200, "❌ Failed to approve project!");
-                Assert.assertTrue(approveResponse.asString().contains("success"), "❌ Approval not successful!");
-                System.out.println("✅ Project Approved Successfully!");
+                Assert.assertEquals(approveResponse.getStatusCode(), 200, "Failed to approve project!");
+                Assert.assertTrue(approveResponse.asString().contains("success"), "Approval not successful!");
+                System.out.println("Project Approved Successfully!");
 
             } else {
-                Assert.fail("❌ No project found in GET response for proposalId: " + proposalId);
+                Assert.fail("No project found in GET response for proposalId: " + proposalId);
             }
 
         } else {
-            Assert.fail("❌ Failed to fetch approve commission details");
+            Assert.fail("Failed to fetch approve commission details");
         }
         addHomeOwnerPrice();
     }
@@ -541,13 +541,13 @@ public class HomeOwner_Create_Project {
                 .then().extract().response();
 
         if (listResp.statusCode() != 200) {
-            System.out.println("❌ Failed to fetch project list → " + listResp.asString());
+            System.out.println("Failed to fetch project list → " + listResp.asString());
             return;
         }
 
         JSONArray dataArr = new JSONObject(listResp.asString()).getJSONArray("data");
         if (dataArr.isEmpty()) {
-            System.out.println("❌ No projects found with status awaiting-project-pricing.");
+            System.out.println("No projects found with status awaiting-project-pricing.");
             return;
         }
 
@@ -555,10 +555,10 @@ public class HomeOwner_Create_Project {
         final int    proposalId  = firstProject.getInt("id");
         final int    projectId   = firstProject.getInt("project_id");
         final double totalAmount = Double.parseDouble(firstProject.get("total_amount").toString());
-        final double proposalPrice = round(totalAmount * 1.10);   // +10 %
-        final String proposalEndDt = "June 23, 2025";            // dummy date sample
+        final double proposalPrice = round(totalAmount * 1.10);
+        final String proposalEndDt = "June 23, 2025";
 
-        System.out.printf("👉 Using proposalId=%d | projectId=%d | price=%.2f%n", proposalId, projectId, proposalPrice);
+        System.out.printf("Using proposalId=%d | projectId=%d | price=%.2f%n", proposalId, projectId, proposalPrice);
 
         JSONArray paymentPlanConfig = new JSONArray()
                 .put(new JSONObject()
@@ -582,7 +582,7 @@ public class HomeOwner_Create_Project {
                         .put("downpayment", 10)
                         .put("moveInPayment", 10)
                         .put("projectPaymentType", "RNPL"))
-                .put(new JSONObject()                          // CUSTOM / ESCROW
+                .put(new JSONObject()
                         .put("planType", "CUSTOM")
                         .put("months", 0)
                         .put("markup", 0)
@@ -608,7 +608,7 @@ public class HomeOwner_Create_Project {
         JSONObject putPayload = new JSONObject()
                 .put("proposal_id", proposalId)
                 .put("amount", String.valueOf(proposalPrice))
-                .put("payment_type", "RNPL")   // business still tags RNPL as master type
+//                .put("payment_type", "RNPL")
                 .put("show_price", false)
                 .put("payment_plan", paymentPlanConfig);
 
@@ -619,9 +619,9 @@ public class HomeOwner_Create_Project {
                 .put(adminBaseUrl + "/api/project/price");
 
         if (putResp.statusCode() == 200) {
-            System.out.println("✅ Homeowner price saved successfully!");
+            System.out.println("Homeowner price saved successfully!");
         } else {
-            System.out.println("❌ Failed to save price → " + putResp.asString());
+            System.out.println("Failed to save price → " + putResp.asString());
         }
 
         fetchProjectDetailsByProposalId(String.valueOf(proposalId), projectId);
@@ -643,7 +643,7 @@ public class HomeOwner_Create_Project {
         System.out.println("Response Body: " + projectDetailsResponse.getBody().asString());
 
         if (projectDetailsResponse.getStatusCode() != 200) {
-            Assert.fail("❌ Failed to fetch project details for project ID: " + projectId);
+            Assert.fail("Failed to fetch project details for project ID: " + projectId);
         }
 
         //KYB Documents
@@ -660,7 +660,7 @@ public class HomeOwner_Create_Project {
         System.out.println("Response Body: " + kybDocumentsResponse.getBody().asPrettyString());
 
         if (kybDocumentsResponse.getStatusCode() != 200) {
-            Assert.fail("❌ Failed to fetch KYB documents for project ID: " + projectId);
+            Assert.fail("Failed to fetch KYB documents for project ID: " + projectId);
         }
 
         //Contract Details
@@ -678,12 +678,12 @@ public class HomeOwner_Create_Project {
 
         // Just log if contract exists or not, don’t fail
         if (contractDetailsResponse.getStatusCode() == 400) {
-            System.out.println("🟡 Contract does not exist yet. Proceeding to create contract...");
+            System.out.println("Contract does not exist yet. Proceeding to create contract...");
         } else if (contractDetailsResponse.getStatusCode() == 200) {
-            System.out.println("✅ Contract already exists for projectId: " + projectId);
+            System.out.println("Contract already exists for projectId: " + projectId);
             // You can choose to exit early or continue based on your use-case
         } else {
-            System.out.println("❌ Unexpected response while checking contract details. Status: " +
+            System.out.println("Unexpected response while checking contract details. Status: " +
                     contractDetailsResponse.getStatusCode());
             // Optional: throw new RuntimeException or handle accordingly
         }
@@ -703,10 +703,10 @@ public class HomeOwner_Create_Project {
         System.out.println("Response Body: " + paymentLinesResponse.getBody().asPrettyString());
 
         if (paymentLinesResponse.getStatusCode() != 200) {
-            Assert.fail("❌ Failed to fetch payment lines for proposal ID: " + proposalId);
+            Assert.fail("Failed to fetch payment lines for proposal ID: " + proposalId);
         }
 
-        System.out.println("✅ All 4 API calls completed successfully.");
+        System.out.println("All 4 API calls completed successfully.");
         //POST Contract Details
         JSONObject payload = new JSONObject();
         payload.put("projectId", projectId);
@@ -737,15 +737,15 @@ public class HomeOwner_Create_Project {
                 .extract()
                 .response();
 
-        System.out.println("📩 POST /contracts/details");
+        System.out.println("POST /contracts/details");
         System.out.println("Response Code: " + postContractResponse.getStatusCode());
         System.out.println("Response Body: " + postContractResponse.getBody().asPrettyString());
 
         if (postContractResponse.getStatusCode() != 200 && postContractResponse.getStatusCode() != 201) {
-            Assert.fail("❌ Failed to submit contract details.");
+            Assert.fail("Failed to submit contract details.");
         }
 
-        // 6️⃣ PUT Update Project Status
+        // PUT Update Project Status
         JSONObject statusPayload = new JSONObject();
         statusPayload.put("status", "awaiting-review");
 
@@ -759,20 +759,20 @@ public class HomeOwner_Create_Project {
                 .extract()
                 .response();
 
-        System.out.println("🔁 PUT /project/update-status/" + projectId);
+        System.out.println("PUT /project/update-status/" + projectId);
         System.out.println("Response Code: " + updateStatusResponse.getStatusCode());
         System.out.println("Response Body: " + updateStatusResponse.getBody().asPrettyString());
 
         if (updateStatusResponse.getStatusCode() != 200) {
-            Assert.fail("❌ Failed to update project status for project ID: " + projectId);
+            Assert.fail("Failed to update project status for project ID: " + projectId);
         }
 
-        System.out.println("✅ Project status updated to 'awaiting-review' successfully.");
+        System.out.println("Project status updated to 'awaiting-review' successfully.");
         proposeToCustomer();
     }
 
 
-    public void proposeToCustomer() {
+    public void proposeToCustomer(){
         String adminToken = AuthHelper.getAdminToken();
 
         // Fetch awaiting-review project
@@ -794,7 +794,7 @@ public class HomeOwner_Create_Project {
                 int proposalId = firstProject.getInt("id");
                 int projectId = firstProject.getInt("project_id");
 
-                System.out.println("✅ Found Project:");
+                System.out.println("Found Project:");
                 System.out.println("Proposal ID: " + proposalId);
                 System.out.println("Project ID: " + projectId);
 
@@ -807,9 +807,9 @@ public class HomeOwner_Create_Project {
                         .extract()
                         .response();
 
-                System.out.println("✅ GET /get-projects Response:\n" + getProjectResponse.asPrettyString());
+                System.out.println("GET /get-projects Response:\n" + getProjectResponse.asPrettyString());
 
-                // ✅GET call for OTP Trigger API
+                //GET call for OTP Trigger API
                 Response otpResponse = given()
                         .header("Authorization", "Bearer " + adminToken)
                         .when()
@@ -818,12 +818,12 @@ public class HomeOwner_Create_Project {
                         .extract()
                         .response();
 
-                System.out.println("✅ OTP Trigger Response: " + otpResponse.asPrettyString());
+                System.out.println("OTP Trigger Response: " + otpResponse.asPrettyString());
 
                 if (otpResponse.statusCode() == 200) {
                     // Fetch OTP from DB
                     String otp = OTPHelper.fetchLatestOTPFromDB();
-                    System.out.println("✅ OTP Fetched from DB: " + otp);
+                    System.out.println("OTP Fetched from DB: " + otp);
 
                     // Approve project using OTP
                     JSONObject putPayload = new JSONObject();
@@ -842,21 +842,21 @@ public class HomeOwner_Create_Project {
                             .extract()
                             .response();
 
-                    System.out.println("✅ PUT /status Response:\n" + putResponse.asPrettyString());
+                    System.out.println("PUT /status Response:\n" + putResponse.asPrettyString());
 
                     if (putResponse.statusCode() == 200) {
-                        System.out.println("🎉 Project approved successfully!");
+                        System.out.println("Project approved successfully!");
                     } else {
-                        System.out.println("❌ Failed to approve project.");
+                        System.out.println("Failed to approve project.");
                     }
                 } else {
-                    System.out.println("❌ OTP trigger failed.");
+                    System.out.println("OTP trigger failed.");
                 }
             } else {
-                System.out.println("❌ No 'awaiting-review' projects found.");
+                System.out.println("No 'awaiting-review' projects found.");
             }
         } else {
-            System.out.println("❌ Failed to fetch projects.");
+            System.out.println(" Failed to fetch projects.");
         }
         proposedToClientContractSign();
     }
@@ -880,10 +880,10 @@ public class HomeOwner_Create_Project {
             int proposalId = dataArray.getJSONObject(0).getInt("id");
             double proposalCost = dataArray.getJSONObject(0).getDouble("proposal_cost");
             int ClintID = dataArray.getJSONObject(0).getInt("client_id");
-            System.out.println("✅ Project ID Found: " + projectId);
-            System.out.println("✅ Proposal ID Found: " + proposalId);
-            System.out.println("✅ Proposal Cost Found: " + proposalCost);
-            System.out.println("✅ Clint ID : " + ClintID);
+            System.out.println("Project ID Found: " + projectId);
+            System.out.println("Proposal ID Found: " + proposalId);
+            System.out.println("Proposal Cost Found: " + proposalCost);
+            System.out.println("Clint ID : " + ClintID);
 
             // Call Get Project Details API
             Response projectDetailsResponse = given()
@@ -894,7 +894,7 @@ public class HomeOwner_Create_Project {
                     .extract()
                     .response();
 
-            System.out.println("✅ Project Details Response: " + projectDetailsResponse.asString());
+            System.out.println("Project Details Response: " + projectDetailsResponse.asString());
 
             // Call Workflow Step API
             Response workflowResponse = given()
@@ -905,7 +905,7 @@ public class HomeOwner_Create_Project {
                     .extract()
                     .response();
 
-            System.out.println("✅ Workflow Step Response: " + workflowResponse.asString());
+            System.out.println("Workflow Step Response: " + workflowResponse.asString());
 
             // Call KYB Documents API
             Response kybResponse = given()
@@ -916,7 +916,7 @@ public class HomeOwner_Create_Project {
                     .extract()
                     .response();
 
-            System.out.println("✅ KYB Documents Response: " + kybResponse.asString());
+            System.out.println("KYB Documents Response: " + kybResponse.asString());
 
             // Call Contract Details
             Response contractDetailsResponse = given()
@@ -932,7 +932,7 @@ public class HomeOwner_Create_Project {
             System.out.println("Response Body: " + contractDetailsResponse.getBody().asPrettyString());
 
             if (contractDetailsResponse.getStatusCode() != 200) {
-                Assert.fail("❌ Failed to fetch contract details for project ID: " + projectId);
+                Assert.fail("Failed to fetch contract details for project ID: " + projectId);
             }
             // Call Payment Lines using proposalId directly
             Response paymentLinesResponse = given()
@@ -948,14 +948,14 @@ public class HomeOwner_Create_Project {
             System.out.println("Response Body: " + paymentLinesResponse.getBody().asPrettyString());
 
             if (paymentLinesResponse.getStatusCode() != 200) {
-                Assert.fail("❌ Failed to fetch payment lines for proposal ID: " + proposalId);
+                Assert.fail("Failed to fetch payment lines for proposal ID: " + proposalId);
             }
 
             // Call the Client ID proof
             File signedContract = new File("C:\\Users\\SARTHAK\\IdeaProjects\\API_Automation\\src\\test\\resource\\test-files/NEW.pdf");
-            System.out.println("📄 File Exists: " + signedContract.exists());
+            System.out.println("File Exists: " + signedContract.exists());
             if (!signedContract.exists()) {
-                System.out.println("❌ Signed contract file does not exist!");
+                System.out.println("Signed contract file does not exist!");
                 return;
             }
 
@@ -971,12 +971,12 @@ public class HomeOwner_Create_Project {
                         .extract()
                         .response();
 
-                System.out.println("✅ Client ID Proof Response: " + clientIdProofResponse.asString());
+                System.out.println("Client ID Proof Response: " + clientIdProofResponse.asString());
             } catch (Exception e) {
-                System.out.println("❌ Exception at Client ID Proof API: " + e.getMessage());
+                System.out.println("Exception at Client ID Proof API: " + e.getMessage());
                 e.printStackTrace();
             }
-        // Call the save contract API
+            // Call the save contract API
             JSONObject contractDetailsPayload = OTPHelper.fetchContractDetailsFromDB();
             contractDetailsPayload.put("projectId", projectId);
             contractDetailsPayload.put("proposalId", proposalId);
@@ -991,7 +991,7 @@ public class HomeOwner_Create_Project {
                     .extract()
                     .response();
 
-            System.out.println("✅ Contract Details API Response: " + Data_response.asString());
+            System.out.println("Contract Details API Response: " + Data_response.asString());
 
             // OTP Trigger for approve Sign contract
             try {
@@ -1002,21 +1002,21 @@ public class HomeOwner_Create_Project {
                         .then()
                         .extract().response();
 
-                System.out.println("✅ OTP Triggered: " + otpTrigger.asString());
+                System.out.println("OTP Triggered: " + otpTrigger.asString());
                 // Short wait for DB to update
                 Thread.sleep(9000);
                  // OTP Fetch
                 String latestOtp = OTPHelper.fetchLatestOTPFromDB();
                 System.out.println("✅ OTP from DB: " + latestOtp);
             } catch (Exception e) {
-                System.out.println("❌ Exception at Approve Contract OTP API: " + e.getMessage());
+                System.out.println("Exception at Approve Contract OTP API: " + e.getMessage());
                 e.printStackTrace();
             }
 
             String latestProofId = OTPHelper.fetchLatestClientIdProofId();
             String latestOTP = OTPHelper.fetchLatestOTPFromDB();
             if (latestOTP == null || latestOTP.isEmpty()) {
-                System.out.println("❌ OTP not found in DB, cannot approve contract.");
+                System.out.println("OTP not found in DB, cannot approve contract.");
                 return;
             }
             Response contractApprovalResponse = given()
@@ -1030,8 +1030,38 @@ public class HomeOwner_Create_Project {
                     .response();
 
             System.out.println("✅ Contract Approval Response: " + contractApprovalResponse.asString());
+            completeWorkflowStep(projectId);
+            System.out.println("ProjectID for completeworkflowStep ----"+projectId );
         } else {
-            System.out.println("❌ No proposed-to-client project found.");
+            System.out.println("No proposed-to-client project found.");
+        }
+
+    }
+    public void completeWorkflowStep(int projectId) {
+
+        String adminToken = AuthHelper.getAdminToken();
+
+        String[] steps = {"UPLOAD_TITLE_DEED"};
+
+        for (String stepName : steps) {
+            JSONObject payload = new JSONObject()
+                    .put("refId",        projectId)
+                    .put("refType",      "project")
+                    .put("workflowName", "PROJECT_POST_PROPOSAL")
+                    .put("stepName",     stepName)
+                    .put("state",        "COMPLETED");
+
+            Response resp = given()
+                    .header("Authorization", "Bearer " + adminToken)
+                    .contentType("application/json")
+                    .body(payload.toString())
+                    .put("https://reno-core-api-test.azurewebsites.net/api/v2/steps/step-mapping");
+
+            System.out.printf("COMPLETE %s → %d | %s%n",
+                    stepName, resp.statusCode(), resp.asString());
+
+            Assert.assertEquals(resp.statusCode(), 200,
+                    "Failed to complete step: " + stepName);
         }
     }
 
