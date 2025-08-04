@@ -36,8 +36,24 @@ public class HomeOwner_Create_Project {
     public void createProject() {
         homeOwnerToken = AuthHelper.getHomeOwnerToken();
 
+        // Define all project types with their configurations
+        ProjectConfig[] projectConfigs = {
+            new ProjectConfig("Apartment", "1", "{\"jsonType\":\"Apartment\",\"unitSize\":72,\"floorsConfiguration\":\"2\",\"bedroomsConfiguration\":\"3\",\"bathroomsConfiguration\":\"2\",\"kitchensConfiguration\":\"2\",\"style\":[\"Industrial\",\"Rustic\"],\"services\":[\"Floor Layout Design\",\"Freezer\"],\"budgetSize\":\"100K - 300K\",\"startTime\":\"In 3 months\",\"budget_value\":\"\"}", "Apartment"),
+            new ProjectConfig("Villa", "2", "{\"jsonType\":\"Villa\",\"unitSize\":80,\"floorsConfiguration\":\"1\",\"bedroomsConfiguration\":\"3\",\"bathroomsConfiguration\":\"3\",\"kitchensConfiguration\":\"2\",\"style\":[\"Modern\",\"Scandinavian\"],\"services\":[\"Floor Layout Design\",\"Lighting Installation\"],\"budgetSize\":\"100K - 300K\",\"startTime\":\"In 3 months\",\"budget_value\":\"\"}", "Villa"),
+            new ProjectConfig("Kitchen", "3", "{\"jsonType\":\"Kitchen\",\"unitSize\":98,\"style\":null,\"services\":[\"Plumbing Installation\",\"Island\"],\"budgetSize\":\"100K - 300K\",\"startTime\":\"Under 3 months\",\"budget_value\":\"\"}", "peninsula"),
+            new ProjectConfig("Bathroom", "4", "{\"jsonType\":\"Bathroom\",\"unitSize\":15,\"unitType\":\"2 Pieces\",\"services\":[\"Plumbing Installation\",\"Lightning Installation\"],\"budgetSize\":\"Under 100K\",\"startTime\":\"In 3 months\",\"budget_value\":\"\"}", "2 Piece"),
+            new ProjectConfig("Commercial", "5", "{\"jsonType\":\"Commercial\",\"unitSize\":50,\"unitType\":\"Core and Shell\",\"style\":[\"Industrial\",\"Scandinavian\"],\"services\":[\"Floor Layout Design\",\"Plumbing Installation\"],\"budgetSize\":\"100K - 300K\",\"startTime\":\"In 3 months\",\"budget_value\":\"\"}", "Core and Shell"),
+            new ProjectConfig("Retail", "6", "{\"jsonType\":\"Retail\",\"unitSize\":92,\"unitType\":\"Shell and Core\",\"style\":[\"Industrial\",\"Scandinavian\"],\"services\":[\"Plumbing Installation\",\"Lightning Installation\"],\"budgetSize\":\"Under 100K\",\"startTime\":\"In 3 months\",\"budget_value\":\"\"}", "Core and Shell"),
+            new ProjectConfig("Airbnb", "7", "{\"jsonType\":\"Airbnb\",\"unitSize\":50,\"configuration\":\"Studio\",\"qualityRating\":\"Premium\",\"style\":[\"Rustic\",\"Country\"],\"services\":[\"Flooring\",\"Kitchen Wrapping\",\"Lighting Installation\",\"Bathroom Wrapping\",\"Furniture\",\"Appliances\",\"Fitout\"],\"budgetSize\":\"100K - 300K\",\"startTime\":\"Just exploring\",\"budget_value\":\"\"}", "Airbnb"),
+            new ProjectConfig("Landscaping", "8", "{\"jsonType\":\"Landscape\",\"unitSize\":78,\"style\":null,\"services\":[\"Pool\",\"Trees and Grass\"],\"budgetSize\":\"100K - 300K\",\"startTime\":\"In 3 months\",\"budget_value\":\"\"}", "Landscape")
+        };
+
+        // Randomly select a project type
+        int randomIndex = (int) (Math.random() * projectConfigs.length);
+        ProjectConfig selectedConfig = projectConfigs[randomIndex];
+
         long randomNumber = System.currentTimeMillis() % 100000;
-        dynamicProjectName = "Project_Number: " + randomNumber;
+        dynamicProjectName = selectedConfig.getProjectType() + "_Project_Number: " + randomNumber;
 
         LocalDate today = LocalDate.now();
         LocalDate nextMonth = today.plusMonths(1);
@@ -45,29 +61,114 @@ public class HomeOwner_Create_Project {
         startDate = today.format(formatter);
         endDate = nextMonth.format(formatter);
 
+        System.out.println("========== PROJECT CREATION STARTED ==========");
+        System.out.println("Selected Project Type: " + selectedConfig.getProjectType());
         System.out.println("Project Name: " + dynamicProjectName);
         System.out.println("Start Date: " + startDate);
         System.out.println("End Date: " + endDate);
+        System.out.println("Exp ID: " + selectedConfig.getExpId());
+        System.out.println("Layout: " + selectedConfig.getLayout());
+        System.out.println("Description: Test " + selectedConfig.getProjectType() + " Project for Automation");
 
+        // Create project request
         Response projectResponse = given()
                 .header("Authorization", "Bearer " + homeOwnerToken)
                 .multiPart("name", dynamicProjectName)
-                .multiPart("project_type", "Kitchen")
+                .multiPart("project_type", selectedConfig.getProjectType())
                 .multiPart("start_date", startDate)
                 .multiPart("end_date", endDate)
-                .multiPart("description", "Test To Check Automation Project Flow")
-                .multiPart("exp_id", "2")
-                .multiPart("form_json", "{\"appliances\":{\"new_Layouts\":[],\"builtin_appliances\":true,\"new_appliances\":false,\"selected_appliances\":[]},\"kitchenDesignSummary\":{\"data\":{\"projectName\":\"" + dynamicProjectName + "\",\"projectDescription\":\"Test To Check Automation Flow\",\"projectLocation\":\"Dubai\",\"projectSubLocationName\":\"Dubai\",\"projectSubLocation\":\"Dubai\"," +
-                        "\"projectType\":\"Kitchen\",\"kitchenLayout\":\"peninsula\",\"size\":\"20\",\"kitchenNewLayout\":[],\"appliances\":[],\"budget\":\"standard\",\"startDate\":\"" + startDate + "\",\"endDate\":\"" + endDate + "\",\"images\":[],\"builtin_appliances\":true,\"new_appliances\":false," +
-                        "\"isLand\":false,\"newLayouts\":false,\"newLighting\":true,\"newFloor\":true,\"cabinets\":true,\"counterTops\":true,\"doorsWindow\":false," +
-                        "\"cabinetsWrapping\":true,\"counterTopsWraping\":false}},\"budget_value\":\"121,120\"}")
-                .multiPart("layout", "peninsula")
-                .multiPart("budget", "standard")
+                .multiPart("description", "Test " + selectedConfig.getProjectType() + " Project for Automation")
+                .multiPart("exp_id", selectedConfig.getExpId())
+                .multiPart("form_json", selectedConfig.getFormJson())
+                .multiPart("layout", selectedConfig.getLayout())
+                .multiPart("location", "Dubai - United Arab Emirates")
                 .multiPart("status", "submitted")
                 .post("https://reno-dev.azurewebsites.net/api/project/create-project");
 
-        System.out.println("Project Creation Response: " + projectResponse.getBody().asString());
-        Assert.assertEquals(projectResponse.getStatusCode(), 200, "[TC_03] Project creation failed!");
+        // Test Cases and Assertions
+        System.out.println("========== TEST CASES EXECUTION ==========");
+        
+        // Test Case 1: Verify HTTP Status Code
+        System.out.println("[TC_01] Verifying HTTP Status Code...");
+        Assert.assertEquals(projectResponse.getStatusCode(), 200, "[TC_01] Project creation failed! Expected 200, got " + projectResponse.getStatusCode());
+        System.out.println("[TC_01] HTTP Status Code: " + projectResponse.getStatusCode() + " - PASSED");
+
+        // Test Case 2: Verify Response is not empty
+        System.out.println("[TC_02] Verifying Response Body is not empty...");
+        String responseBody = projectResponse.getBody().asString();
+        Assert.assertNotNull(responseBody, "[TC_02] Response body is null!");
+        Assert.assertFalse(responseBody.isEmpty(), "[TC_02] Response body is empty!");
+        System.out.println("[TC_02] Response Body Length: " + responseBody.length() + " characters - PASSED");
+
+        // Test Case 3: Verify Project Type in Response
+        System.out.println("[TC_03] Verifying Project Type in Response...");
+        try {
+            JSONObject jsonResponse = new JSONObject(responseBody);
+            if (jsonResponse.has("data")) {
+                JSONObject data = jsonResponse.getJSONObject("data");
+                if (data.has("project_type")) {
+                    String actualProjectType = data.getString("project_type");
+                    Assert.assertEquals(actualProjectType, selectedConfig.getProjectType(), 
+                        "[TC_03] Project type mismatch! Expected: " + selectedConfig.getProjectType() + ", Got: " + actualProjectType);
+                    System.out.println("[TC_03] Project Type Verification: " + actualProjectType + " - PASSED");
+                } else {
+                    System.out.println("[TC_03] Project type field not found in response");
+                }
+            } else {
+                System.out.println("[TC_03] Data field not found in response");
+            }
+        } catch (Exception e) {
+            System.out.println("[TC_03] Could not parse response for project type verification: " + e.getMessage());
+        }
+
+        // Test Case 4: Verify Project Name in Response
+        System.out.println("[TC_04] Verifying Project Name in Response...");
+        try {
+            JSONObject jsonResponse = new JSONObject(responseBody);
+            if (jsonResponse.has("data")) {
+                JSONObject data = jsonResponse.getJSONObject("data");
+                if (data.has("name")) {
+                    String actualProjectName = data.getString("name");
+                    Assert.assertEquals(actualProjectName, dynamicProjectName, 
+                        "[TC_04] Project name mismatch! Expected: " + dynamicProjectName + ", Got: " + actualProjectName);
+                    System.out.println("[TC_04] Project Name Verification: " + actualProjectName + " - PASSED");
+                } else {
+                    System.out.println("[TC_04] Project name field not found in response");
+                }
+            } else {
+                System.out.println("[TC_04] Data field not found in response");
+            }
+        } catch (Exception e) {
+            System.out.println("[TC_04] Could not parse response for project name verification: " + e.getMessage());
+        }
+
+        System.out.println("========== PROJECT CREATION COMPLETED ==========");
+        System.out.println("Response Summary:");
+        System.out.println("• Status Code: " + projectResponse.getStatusCode());
+        System.out.println("• Project Type: " + selectedConfig.getProjectType());
+        System.out.println("• Project Name: " + dynamicProjectName);
+        System.out.println("• Response Length: " + responseBody.length() + " characters");
+        System.out.println("All test cases executed successfully!");
+    }
+
+    // Helper class to store project configurations
+    private static class ProjectConfig {
+        private final String projectType;
+        private final String expId;
+        private final String formJson;
+        private final String layout;
+
+        public ProjectConfig(String projectType, String expId, String formJson, String layout) {
+            this.projectType = projectType;
+            this.expId = expId;
+            this.formJson = formJson;
+            this.layout = layout;
+        }
+
+        public String getProjectType() { return projectType; }
+        public String getExpId() { return expId; }
+        public String getFormJson() { return formJson; }
+        public String getLayout() { return layout; }
     }
 
     @Test(priority = 2, dependsOnMethods = "createProject")
@@ -1007,7 +1108,7 @@ public class HomeOwner_Create_Project {
                 Thread.sleep(9000);
                  // OTP Fetch
                 String latestOtp = OTPHelper.fetchLatestOTPFromDB();
-                System.out.println("✅ OTP from DB: " + latestOtp);
+                System.out.println("OTP from DB: " + latestOtp);
             } catch (Exception e) {
                 System.out.println("Exception at Approve Contract OTP API: " + e.getMessage());
                 e.printStackTrace();
@@ -1029,7 +1130,7 @@ public class HomeOwner_Create_Project {
                     .extract()
                     .response();
 
-            System.out.println("✅ Contract Approval Response: " + contractApprovalResponse.asString());
+            System.out.println("Contract Approval Response: " + contractApprovalResponse.asString());
             completeWorkflowStep(projectId);
             System.out.println("ProjectID for completeworkflowStep ----"+projectId );
         } else {

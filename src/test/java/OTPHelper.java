@@ -14,26 +14,26 @@ public class OTPHelper {
         String username = "reno-test";
         String password = "WE}nt.#t4=/ESPz6";
 
-        System.out.println("🔍 Starting DB connection to fetch latest OTP...");
+        System.out.println("Starting DB connection to fetch latest OTP...");
 
         try (Connection conn = DriverManager.getConnection(url, username, password);
              Statement stmt = conn.createStatement()) {
 
-            System.out.println("✅ DB connection successful.");
+            System.out.println("DB connection successful.");
             String query = "SELECT otp FROM otp WHERE user_id = 907 ORDER BY id DESC";
 
-            System.out.println("📥 Running query: " + query);
+            System.out.println("Running query: " + query);
             ResultSet rs = stmt.executeQuery(query);
 
             if (rs.next()) {
                 latestOTP = rs.getString("otp");
-                System.out.println("✅ OTP fetched from DB: " + latestOTP);
+                System.out.println("OTP fetched from DB: " + latestOTP);
             } else {
-                System.out.println("⚠️ No OTP found in the database table.");
+                System.out.println("No OTP found in the database table.");
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Database error occurred: " + e.getMessage());
+            System.out.println("Database error occurred: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -45,26 +45,26 @@ public class OTPHelper {
         String username = "reno-test";
         String password = "WE}nt.#t4=/ESPz6";
 
-        System.out.println("🔍 Starting DB connection to fetch latest Client ID Proof ID...");
+        System.out.println("Starting DB connection to fetch latest Client ID Proof ID...");
 
         try (Connection conn = DriverManager.getConnection(url, username, password);
              Statement stmt = conn.createStatement()) {
 
-            System.out.println("✅ DB connection successful.");
+            System.out.println("DB connection successful.");
             String query = "select id from documents order by id desc";
 
-            System.out.println("📥 Running query: " + query);
+            System.out.println("Running query: " + query);
             ResultSet rs = stmt.executeQuery(query);
 
             if (rs.next()) {
                 latestId = rs.getString("id");
-                System.out.println("✅ Latest client_id_proof ID fetched: " + latestId);
+                System.out.println("Latest client_id_proof ID fetched: " + latestId);
             } else {
-                System.out.println("⚠️ No records found in client_id_proof table.");
+                System.out.println("No records found in client_id_proof table.");
             }
 
         } catch (SQLException e) {
-            System.out.println("❌ Database error occurred: " + e.getMessage());
+            System.out.println("Database error occurred: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -82,7 +82,7 @@ public class OTPHelper {
         try (Connection conn = DriverManager.getConnection(url, username, password);
              Statement stmt = conn.createStatement()) {
 
-            System.out.println("✅ Connected to DB for Contract Details.");
+            System.out.println("Connected to DB for Contract Details.");
 
             // Step 1: Fetch from contract_details
             String contractDetailsQuery = "SELECT TOP 1 id, contract_num, plan_id, document_signature_source FROM contract_details ORDER BY id DESC";
