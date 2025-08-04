@@ -376,17 +376,17 @@ public class HomeOwner_Create_Project {
                 double projectCost = firstProject.getDouble("total_amount");
                 System.out.println("Project Cost: " + projectCost);
 
-                double initialDepositPercent = 10;
-                double projectCompletionPercent = 5;
+                double initialDepositPercent = 50;
+                double projectCompletionPercent = 30;
                 double warrantyCompletionPercent = 5;
-                double renoCommissionPercent = 5;
-                double weeklyDelayPercent = 1;
-                double depositForDelayGuaranteesPercent = 5;
+                double renoCommissionPercent = 0;
+                double weeklyDelayPercent = 0;
+                double depositForDelayGuaranteesPercent = 0;
 
                 double fixedPercentTotal = initialDepositPercent + projectCompletionPercent + warrantyCompletionPercent
                         + renoCommissionPercent + weeklyDelayPercent + depositForDelayGuaranteesPercent;
 
-                double contractorFeePercent = 100 - fixedPercentTotal;
+                double contractorFeePercent = 0;
 
                 System.out.println("Final Split:");
                 System.out.println("Initial Deposit: " + initialDepositPercent + "%");
