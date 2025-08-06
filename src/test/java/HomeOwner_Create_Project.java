@@ -34,6 +34,7 @@ public class HomeOwner_Create_Project {
 
     @Test(priority = 1)
     public void createProject() {
+        // Get HomeOwner token by prompting for email and password
         homeOwnerToken = AuthHelper.getHomeOwnerToken();
 
         // Define all project types with their configurations
