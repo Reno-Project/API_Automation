@@ -3,18 +3,13 @@ package utils;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import static io.restassured.RestAssured.given;
-import java.util.Scanner;
-import java.util.HashMap;
-import java.util.Map;
 
 public class AuthHelper {
     private static String contractorToken;
     private static String homeOwnerToken;
     private static String adminToken;
-    private static Map<String, String> userTokens = new HashMap<>();
-    private static Scanner scanner = new Scanner(System.in);
 
-    // Public method to fetch Contractor Token (unchanged)
+    // Public method to fetch Contractor Token
     public static String getContractorToken() {
         if (contractorToken == null) {
             contractorToken = fetchToken("sarthak.bansal@renohome.ae", "SB@123sarthak", "web");
@@ -23,7 +18,7 @@ public class AuthHelper {
         return contractorToken;
     }
 
-    // Public method to fetch Admin Token (unchanged)
+    // Public method to fetch Admin Token
     public static String getAdminToken() {
         if (adminToken == null) {
             adminToken = fetchToken("sarthak.bansal@renohome.ae", "Demo@123", "reno");
@@ -41,45 +36,8 @@ public class AuthHelper {
         return homeOwnerToken;
     }
 
-    // Method to get HomeOwner token with specific credentials
-    public static String getHomeOwnerToken(String email, String password) {
-        String userKey = email + "_homeowner";
-        if (!userTokens.containsKey(userKey)) {
-            String token = fetchToken(email, password, "app");
-            userTokens.put(userKey, token);
-            System.out.println("Generated HomeOwner Token for " + email + ": " + token);
-        }
-        return userTokens.get(userKey);
-    }
-
-    // Method to clear cached tokens (useful for testing different users)
-    public static void clearCachedTokens() {
-        userTokens.clear();
-        homeOwnerToken = null;
-        System.out.println("Cached tokens cleared successfully.");
-    }
-
-    // Method to get token for any user type
-    public static String getUserToken(String email, String password, String userType) {
-        String userKey = email + "_" + userType;
-        if (!userTokens.containsKey(userKey)) {
-            String deviceType = "app"; // default
-            if ("contractor".equals(userType)) {
-                deviceType = "web";
-            } else if ("admin".equals(userType)) {
-                deviceType = "reno";
-            }
-            
-            String token = fetchToken(email, password, deviceType);
-            userTokens.put(userKey, token);
-            System.out.println("Generated " + userType + " Token for " + email + ": " + token);
-        }
-        return userTokens.get(userKey);
-    }
-
-    // Private helper method to fetch token (unchanged)
+    // Private helper method to fetch token
     private static String fetchToken(String email, String password, String deviceType) {
-        // Optional: log payload for debugging
         String requestBody = String.format(
                 "{\"email\": \"%s\", \"password\": \"%s\", \"device_type\": \"%s\"}",
                 email, password, deviceType
