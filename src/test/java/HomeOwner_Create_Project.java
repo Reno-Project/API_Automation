@@ -716,7 +716,7 @@ public class HomeOwner_Create_Project {
                 .put("proposal_id", proposalId)
                 .put("amount", String.valueOf(proposalPrice))
 //                .put("payment_type", "RNPL")
-                .put("show_price", false)
+                .put("show_price", true)
                 .put("payment_plan", paymentPlanConfig);
 
         Response putResp = given()
