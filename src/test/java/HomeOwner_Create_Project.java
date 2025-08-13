@@ -19,6 +19,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import static io.restassured.RestAssured.given;
 
@@ -924,7 +929,7 @@ public class HomeOwner_Create_Project {
 
                 if (otpResponse.statusCode() == 200) {
                     // Fetch OTP from DB
-                    String otp = OTPHelper.fetchLatestOTPFromDB();
+                    String otp = Database_Helper.fetchLatestOTPFromDB();
                     System.out.println("OTP Fetched from DB: " + otp);
 
                     // Approve project using OTP
@@ -1079,7 +1084,7 @@ public class HomeOwner_Create_Project {
                 e.printStackTrace();
             }
             // Call the save contract API
-            JSONObject contractDetailsPayload = OTPHelper.fetchContractDetailsFromDB();
+            JSONObject contractDetailsPayload = Database_Helper.fetchContractDetailsFromDB();
             contractDetailsPayload.put("projectId", projectId);
             contractDetailsPayload.put("proposalId", proposalId);
 
@@ -1108,15 +1113,15 @@ public class HomeOwner_Create_Project {
                 // Short wait for DB to update
                 Thread.sleep(9000);
                  // OTP Fetch
-                String latestOtp = OTPHelper.fetchLatestOTPFromDB();
+                String latestOtp = Database_Helper.fetchLatestOTPFromDB();
                 System.out.println("OTP from DB: " + latestOtp);
             } catch (Exception e) {
                 System.out.println("Exception at Approve Contract OTP API: " + e.getMessage());
                 e.printStackTrace();
             }
 
-            String latestProofId = OTPHelper.fetchLatestClientIdProofId();
-            String latestOTP = OTPHelper.fetchLatestOTPFromDB();
+            String latestProofId = Database_Helper.fetchLatestClientIdProofId();
+            String latestOTP = Database_Helper.fetchLatestOTPFromDB();
             if (latestOTP == null || latestOTP.isEmpty()) {
                 System.out.println("OTP not found in DB, cannot approve contract.");
                 return;
@@ -1141,9 +1146,8 @@ public class HomeOwner_Create_Project {
     }
     public void completeWorkflowStep(int projectId) {
 
-        String adminToken = AuthHelper.getAdminToken();
-
-        String[] steps = {"UPLOAD_TITLE_DEED"};
+        String homeOwnerToken = AuthHelper.getHomeOwnerToken();
+        String[] steps = {"KYC","UPLOAD_TITLE_DEED","UPLOAD_CREDIT_CHECK","UPLOAD_SIGNED_CONTRACT"};
 
         for (String stepName : steps) {
             JSONObject payload = new JSONObject()
@@ -1154,7 +1158,7 @@ public class HomeOwner_Create_Project {
                     .put("state",        "COMPLETED");
 
             Response resp = given()
-                    .header("Authorization", "Bearer " + adminToken)
+                    .header("Authorization", "Bearer " + homeOwnerToken)
                     .contentType("application/json")
                     .body(payload.toString())
                     .put("https://reno-core-api-test.azurewebsites.net/api/v2/steps/step-mapping");
@@ -1165,7 +1169,46 @@ public class HomeOwner_Create_Project {
             Assert.assertEquals(resp.statusCode(), 200,
                     "Failed to complete step: " + stepName);
         }
-    }
-
-
+                             // Payment Plan Selection
+                 JSONObject paymentPayload = new JSONObject()
+                         .put("proposalId", Integer.parseInt(proposalId))
+                         .put("projectPaymentType", "RNPL");
+                         
+                 Response paymentResponse = given()
+                         .header("Authorization", "Bearer " + homeOwnerToken)
+                         .contentType("application/json")
+                         .body(paymentPayload.toString())
+                         .when()
+                         .post("https://reno-core-api-test.azurewebsites.net/api/v2/payment-plan/project-plan-type/select");
+                         
+                 System.out.println("Payment Plan Selection Response: " + paymentResponse.asString());
+                 
+        // Fetch plan ID from database using Database_Helper
+        String planId = Database_Helper.fetchPaymentPlanID(proposalId);
+        
+        System.out.println("Plan ID: " + planId);
+        
+        if (planId == null || planId.isEmpty()) {
+            System.out.println("ERROR: Plan ID is empty or null. Cannot proceed with payment plan acceptance.");
+            Assert.fail("Plan ID is required but not found. Check the payment plan selection API response.");
+            return;
+        }
+        
+        // Payment Plan Select API call
+        JSONObject acceptPaymentPayload = new JSONObject()
+                .put("planId", Integer.parseInt(planId))
+                .put("projectId", projectId)
+                .put("proposalId", Integer.parseInt(proposalId));
+                
+        Response acceptPaymentResponse = given()
+                .header("Authorization", "Bearer " + homeOwnerToken)
+                .contentType("application/json")
+                .body(acceptPaymentPayload.toString())
+                .when()
+                .post("https://reno-core-api-test.azurewebsites.net/api/v2/payment-plan/select");
+                
+        System.out.println("Accept Payment Plan Response: " + acceptPaymentResponse.asString());
+        Assert.assertEquals(acceptPaymentResponse.getStatusCode(), 200, "Failed to accept payment plan");
+     }
 }
+

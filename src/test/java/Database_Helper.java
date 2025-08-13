@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 
-public class OTPHelper {
+public class Database_Helper {
     public static String fetchLatestOTPFromDB() {
         String latestOTP = "";
         String url = "jdbc:sqlserver://reno-test.database.windows.net;encrypt=true;trustServerCertificate=true;databaseName=reno-test";
@@ -140,5 +140,36 @@ public class OTPHelper {
         return payload;
     }
 
+    public static String fetchPaymentPlanID(String proposalId) {
+        String planId = "";
+        String url = "jdbc:sqlserver://reno-test.database.windows.net;encrypt=true;trustServerCertificate=true;databaseName=reno-test";
+        String username = "reno-test";
+        String password = "WE}nt.#t4=/ESPz6";
+
+        System.out.println("Starting DB connection to fetch Payment Plan ID for proposal: " + proposalId);
+
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+             Statement stmt = conn.createStatement()) {
+
+            System.out.println("DB connection successful.");
+            String query = "SELECT id FROM payment_plan WHERE proposal_id = " + proposalId + " AND plan_type = 'MONTHS_6'";
+
+            System.out.println("Running query: " + query);
+            ResultSet rs = stmt.executeQuery(query);
+
+            if (rs.next()) {
+                planId = rs.getString("id");
+                System.out.println("Payment Plan ID fetched from DB: " + planId);
+            } else {
+                System.out.println("No Payment Plan ID found for proposal: " + proposalId + " with plan_type = 'MONTHS_6'");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Database error occurred: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return planId;
+    }
 
 }
