@@ -571,6 +571,26 @@ public class HomeOwner_Create_Project {
                 } else {
                     Assert.fail("API success false — Request not sent to the contractor.");
                 }
+                // Update project status to awaiting-contractor-confirmation
+                JSONObject statusPayload = new JSONObject();
+                statusPayload.put("status", "awaiting-contractor-confirmation");
+                
+                Response statusUpdateResponse = given()
+                        .header("Authorization", "Bearer " + adminToken)
+                        .header("Content-Type", "application/json")
+                        .body(statusPayload.toString())
+                        .when()
+                        .put("https://reno-dev.azurewebsites.net/api/project/update-status/" + projectID)
+                        .then()
+                        .extract()
+                        .response();
+
+                System.out.println("Status Update Response: " + statusUpdateResponse.getBody().asString());
+                if (statusUpdateResponse.getStatusCode() == 200) {
+                    System.out.println("Project status updated successfully");
+                } else {
+                    System.out.println("Warning: Project status update failed with status code: " + statusUpdateResponse.getStatusCode());
+                }
             }
         }
         Approve_commissionDetails(String.valueOf(proposalId));
@@ -711,6 +731,11 @@ public class HomeOwner_Create_Project {
                 .post(coreBaseUrl + "/api/v2/payment-plan/proposal/" + proposalId + "/view");
 
         System.out.println("/view response → " + viewResp.asString());
+        System.out.println("/view response status code → " + viewResp.getStatusCode());
+        
+        if (viewResp.getStatusCode() != 200) {
+            System.out.println("WARNING: Payment plan view API failed with status: " + viewResp.getStatusCode());
+        }
 
         JSONObject putPayload = new JSONObject()
                 .put("proposal_id", proposalId)
@@ -1182,15 +1207,44 @@ public class HomeOwner_Create_Project {
                          .post("https://reno-core-api-test.azurewebsites.net/api/v2/payment-plan/project-plan-type/select");
                          
                  System.out.println("Payment Plan Selection Response: " + paymentResponse.asString());
+                 System.out.println("Payment Plan Selection Status Code: " + paymentResponse.getStatusCode());
                  
-        // Fetch plan ID from database using Database_Helper
-        String planId = Database_Helper.fetchPaymentPlanID(proposalId);
+                 // Debug: Check if the response contains plan information
+                 if (paymentResponse.getStatusCode() == 200) {
+                     try {
+                         JSONObject responseJson = new JSONObject(paymentResponse.asString());
+                         System.out.println("Payment Plan Selection Response JSON: " + responseJson.toString(4));
+                     } catch (Exception e) {
+                         System.out.println("Could not parse payment plan selection response as JSON: " + e.getMessage());
+                     }
+                 }
+                 
+        // Fetch plan ID from database using Database_Helper with retry mechanism
+        String planId = null;
+        int maxRetries = 5;
+        int retryCount = 0;
         
-        System.out.println("Plan ID: " + planId);
+        while ((planId == null || planId.isEmpty()) && retryCount < maxRetries) {
+            try {
+                Thread.sleep(2000); // Wait 2 seconds before retry
+                planId = Database_Helper.fetchPaymentPlanID(proposalId);
+                retryCount++;
+                System.out.println("Attempt " + retryCount + " - Plan ID: " + planId);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
         
         if (planId == null || planId.isEmpty()) {
-            System.out.println("ERROR: Plan ID is empty or null. Cannot proceed with payment plan acceptance.");
-            Assert.fail("Plan ID is required but not found. Check the payment plan selection API response.");
+            System.out.println("ERROR: Plan ID is empty or null after " + maxRetries + " attempts. Cannot proceed with payment plan acceptance.");
+            System.out.println("Debugging info - Proposal ID: " + proposalId);
+            System.out.println("This usually means:");
+            System.out.println("1. The payment plan creation API didn't create any plans in the database");
+            System.out.println("2. The proposal ID is incorrect");
+            System.out.println("3. There's a timing issue - the plan hasn't been created yet");
+            System.out.println("4. The database query is looking for the wrong plan type");
+            Assert.fail("Plan ID is required but not found after retries. Check the payment plan selection API response and database.");
             return;
         }
         
@@ -1209,6 +1263,34 @@ public class HomeOwner_Create_Project {
                 
         System.out.println("Accept Payment Plan Response: " + acceptPaymentResponse.asString());
         Assert.assertEquals(acceptPaymentResponse.getStatusCode(), 200, "Failed to accept payment plan");
+        System.out.println("Payment plan accepted successfully");
+        
+        makedownpayment();
+    }
+     
+     public void makedownpayment() {
+         System.out.println("Making down payment...");
+         // Get HomeOwner token
+         String homeOwnerToken = AuthHelper.getHomeOwnerToken();
+         System.out.println("HomeOwner token fetched successfully");
+         
+         System.out.println("Using Proposal ID: " + proposalId);
+         
+         // Hit the POST API with proposal ID
+         Response response = given()
+                 .header("Authorization", "Bearer " + homeOwnerToken)
+                 .contentType("application/json")
+                 .when()
+                 .post("https://reno-core-api-test.azurewebsites.net/api/v2/admin/support/proposals/" + proposalId + "/accept");
+         
+         System.out.println("Down Payment API Response: " + response.getBody().asString());
+         System.out.println("Down Payment API Status Code: " + response.getStatusCode());
+         
+         // Validate the response
+         Assert.assertEquals(response.getStatusCode(), 200, "Down payment API failed!");
+         System.out.println("Project Moves In Ongoing status successfully!");
+          
+         }
      }
-}
+
 

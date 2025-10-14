@@ -152,16 +152,46 @@ public class Database_Helper {
              Statement stmt = conn.createStatement()) {
 
             System.out.println("DB connection successful.");
-            String query = "SELECT id FROM payment_plan WHERE proposal_id = " + proposalId + " AND plan_type = 'MONTHS_6'";
-
+            
+            String debugQuery = "SELECT id, plan_type, created_at FROM payment_plan WHERE proposal_id = " + proposalId + " ORDER BY id DESC";
+            System.out.println("Debug query to see all plans: " + debugQuery);
+            ResultSet debugRs = stmt.executeQuery(debugQuery);
+            
+            boolean hasPlans = false;
+            while (debugRs.next()) {
+                hasPlans = true;
+                System.out.println("Found plan - ID: " + debugRs.getString("id") + 
+                                 ", Type: " + debugRs.getString("plan_type") + 
+                                 ", Created: " + debugRs.getString("created_at"));
+            }
+            
+            if (!hasPlans) {
+                System.out.println("No payment plans found for proposal: " + proposalId);
+                return "";
+            }
+            
+            // Try to find with MONTHS_6 plan type first
+            String query = "SELECT id, plan_type FROM payment_plan WHERE proposal_id = " + proposalId + " AND plan_type = 'MONTHS_6'";
             System.out.println("Running query: " + query);
             ResultSet rs = stmt.executeQuery(query);
 
             if (rs.next()) {
                 planId = rs.getString("id");
-                System.out.println("Payment Plan ID fetched from DB: " + planId);
+                System.out.println("Payment Plan ID fetched from DB (MONTHS_6): " + planId);
             } else {
-                System.out.println("No Payment Plan ID found for proposal: " + proposalId + " with plan_type = 'MONTHS_6'");
+                // If not found with MONTHS_6, try to find any plan for this proposal
+                System.out.println("No MONTHS_6 plan found, searching for any plan type...");
+                String fallbackQuery = "SELECT TOP 1 id, plan_type FROM payment_plan WHERE proposal_id = " + proposalId + " ORDER BY id DESC";
+                System.out.println("Running fallback query: " + fallbackQuery);
+                rs = stmt.executeQuery(fallbackQuery);
+                
+                if (rs.next()) {
+                    planId = rs.getString("id");
+                    String planType = rs.getString("plan_type");
+                    System.out.println("Payment Plan ID fetched from DB (fallback): " + planId + " with plan_type: " + planType);
+                } else {
+                    System.out.println("No Payment Plan ID found for proposal: " + proposalId + " with any plan type");
+                }
             }
 
         } catch (SQLException e) {
