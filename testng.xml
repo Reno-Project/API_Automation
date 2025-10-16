@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
-<suite name="API Automation Suite">
-    <test name="HomeOwner Create Project Tests">
+<suite name="API Automation Suite" parallel="false">
+    <test name="HomeOwner Create Project Tests" preserve-order="true">
         <classes>
             <class name="HomeOwner_Create_Project"/>
         </classes>
     </test>
     
-    <test name="Contractor Onboarding Tests">
+    <test name="Contractor Onboarding Tests" preserve-order="true">
         <classes>
             <class name="Contractor_Onboarding_Flow"/>
         </classes>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
-<suite name="Contractor Onboarding Suite">
-    <test name="Contractor Onboarding Flow Tests">
+<suite name="Contractor Onboarding Suite" parallel="false">
+    <test name="Contractor Onboarding Flow Tests" preserve-order="true">
         <classes>
             <class name="Contractor_Onboarding_Flow"/>
         </classes>

@@ -8,7 +8,6 @@ import java.util.Random;
 
 public class WebHelper {
     
-    private static int contractorCounter = 0;
     
     // Database connection details
     private static final String UAE_DB_URL = "jdbc:sqlserver://reno-test.database.windows.net;encrypt=true;trustServerCertificate=true;databaseName=reno-test";
@@ -82,7 +81,7 @@ public class WebHelper {
         
         // Fill remaining length (4-11 more characters) with random characters
         String allChars = uppercase + lowercase + numbers + specialChars;
-        int remainingLength = 4 + random.nextInt(8); // 4-11 more characters
+        int remainingLength = 4 + random.nextInt(8); 
         
         for (int i = 0; i < remainingLength; i++) {
             password.append(allChars.charAt(random.nextInt(allChars.length())));
