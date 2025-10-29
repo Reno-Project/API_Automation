@@ -27,8 +27,27 @@ public class WebHelper {
     }
     
     /**
+     * Generate random test email for homeowner onboarding
+     * @return Random email string
+     */
+    public static String generateRandomHomeOwnerEmail() {
+        Random random = new Random();
+        int randomNumber = random.nextInt(9999) + 1; // Generate number between 1-9999
+        return "test.homeowner." + randomNumber + "@gmail.com";
+    }
+    
+    /**
+     * Generate random username for homeowner
+     * @return Random username string
+     */
+    public static String generateRandomUsername() {
+        Random random = new Random();
+        int randomNumber = random.nextInt(9999) + 1; // Generate number between 1-9999
+        return "Test-User-" + randomNumber;
+    }
+    
+    /**
      * Generate random phone number for contractor onboarding
-     * Format: 0758348{randomNumber}
      * @return Random phone number string
      */
     public static String generateRandomPhoneNumber() {
@@ -61,8 +80,8 @@ public class WebHelper {
      * - Contains an uppercase letter
      * - Contains a lowercase letter
      * - Contains a special character symbol
-     * - Has at least 8 characters to 15 characters
-     * @return Random password string
+     * - Exactly 8 characters
+     * @return Random password string (8 characters)
      */
     public static String generateRandomPassword() {
         String uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -73,17 +92,15 @@ public class WebHelper {
         Random random = new Random();
         StringBuilder password = new StringBuilder();
         
-        // Ensure at least one character from each category
+        // Ensure at least one character from each category (4 characters)
         password.append(uppercase.charAt(random.nextInt(uppercase.length())));
         password.append(lowercase.charAt(random.nextInt(lowercase.length())));
         password.append(numbers.charAt(random.nextInt(numbers.length())));
         password.append(specialChars.charAt(random.nextInt(specialChars.length())));
         
-        // Fill remaining length (4-11 more characters) with random characters
+        // Fill remaining 4 characters with random characters to make exactly 8 characters
         String allChars = uppercase + lowercase + numbers + specialChars;
-        int remainingLength = 4 + random.nextInt(8); 
-        
-        for (int i = 0; i < remainingLength; i++) {
+        for (int i = 0; i < 4; i++) {
             password.append(allChars.charAt(random.nextInt(allChars.length())));
         }
         
